@@ -1,0 +1,14 @@
+{
+  "opencode": {
+    "planner":       "anthropic/claude-sonnet-4-20250514",
+    "task-splitter": "anthropic/claude-haiku-4-20250514",
+    "implementer":   "anthropic/claude-sonnet-4-20250514",
+    "pr-creator":    "anthropic/claude-haiku-4-20250514"
+  },
+  "claude": {
+    "planner":       "sonnet",
+    "task-splitter": "haiku",
+    "implementer":   "sonnet",
+    "pr-creator":    "haiku"
+  }
+}
