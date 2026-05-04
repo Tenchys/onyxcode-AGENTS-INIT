@@ -3,13 +3,17 @@ set -euo pipefail
 
 # ============================================================================
 # Subagent Stack Installer
-# Installs agent configs for both opencode and Claude Code
+# Installs agent configs for opencode, Claude Code, or both
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 SRC_DIR="$SCRIPT_DIR"
 MODELS_FILE="$SRC_DIR/models.json"
+INSTALL_AGENTS_FILE="$SRC_DIR/AGENTS.md"
+
+TARGET=""
+TARGET_EXPLICIT=0
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -21,6 +25,71 @@ log()  { echo -e "${GREEN}[✓]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; }
 info() { echo -e "${CYAN}[→]${NC} $1"; }
+
+usage() {
+  cat <<'EOF'
+Usage: ./install.sh [--target opencode|claude|both]
+
+Targets:
+  opencode   Install .opencode assets and merge opencode.json
+  claude     Install .claude assets only
+  both       Install both sets (default)
+EOF
+}
+
+normalize_target() {
+  case "${1:-}" in
+    opencode|claude|both) printf '%s' "$1" ;;
+    *) return 1 ;;
+  esac
+}
+
+parse_args() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -t|--target)
+        [ $# -ge 2 ] || { err "Missing value for $1"; exit 1; }
+        TARGET="$2"
+        TARGET_EXPLICIT=1
+        shift 2
+        ;;
+      --opencode)
+        TARGET="opencode"
+        TARGET_EXPLICIT=1
+        shift
+        ;;
+      --claude)
+        TARGET="claude"
+        TARGET_EXPLICIT=1
+        shift
+        ;;
+      --both)
+        TARGET="both"
+        TARGET_EXPLICIT=1
+        shift
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        err "Unknown argument: $1"
+        usage
+        exit 1
+        ;;
+    esac
+  done
+}
+
+prompt_target() {
+  info "Select installation target:"
+  select choice in opencode claude both; do
+    if [ -n "$choice" ]; then
+      TARGET="$choice"
+      break
+    fi
+  done
+}
 
 # ---------------------------------------------------------------------------
 # Parse models.json using python3
@@ -41,6 +110,19 @@ print(data.get('$tool', {}).get('$agent', ''))
 prepare_dir() {
   local dir="$1"
   mkdir -p "$dir"
+}
+
+# ---------------------------------------------------------------------------
+# Install agent for opencode (symlink)
+# ---------------------------------------------------------------------------
+install_project_agents_file() {
+  local src="$INSTALL_AGENTS_FILE"
+  local dst="$PROJECT_ROOT/AGENTS.md"
+
+  [ -f "$src" ] || { err "Source not found: $src"; return 1; }
+
+  cp -f "$src" "$dst"
+  log "project AGENTS:  $dst"
 }
 
 # ---------------------------------------------------------------------------
@@ -92,127 +174,255 @@ install_claude_agent() {
 }
 
 # ---------------------------------------------------------------------------
-# Install commands (symlink to both targets)
+# Install commands for a single target
 # ---------------------------------------------------------------------------
-install_commands() {
-  local cmd_name="$1"
+install_commands_for_target() {
+  local target="$1"
+  local cmd_name="$2"
   local src="$SRC_DIR/commands/${cmd_name}.md"
-  local dst_opencode="$PROJECT_ROOT/.opencode/commands/${cmd_name}.md"
-  local dst_claude="$PROJECT_ROOT/.claude/commands/${cmd_name}.md"
+  local dst_root="$PROJECT_ROOT/.$target/commands/${cmd_name}.md"
 
   [ -f "$src" ] || { err "Source not found: $src"; return 1; }
 
-  prepare_dir "$(dirname "$dst_opencode")"
-  prepare_dir "$(dirname "$dst_claude")"
+  prepare_dir "$(dirname "$dst_root")"
 
-  ln -sf "$src" "$dst_opencode"
-  ln -sf "$src" "$dst_claude"
-  log "command:        ${cmd_name} → .opencode/commands/ & .claude/commands/"
+  ln -sf "$src" "$dst_root"
+  log "command:        ${cmd_name} → .$target/commands/"
 }
 
 # ---------------------------------------------------------------------------
-# Install skills (symlink to both targets)
+# Install skills for a single target
 # ---------------------------------------------------------------------------
-install_skills() {
-  local skill_name="$1"
+install_skills_for_target() {
+  local target="$1"
+  local skill_name="$2"
   local src="$SRC_DIR/skills/${skill_name}/SKILL.md"
-  local dst_opencode="$PROJECT_ROOT/.opencode/skills/${skill_name}/SKILL.md"
-  local dst_claude="$PROJECT_ROOT/.claude/skills/${skill_name}/SKILL.md"
+  local dst_root="$PROJECT_ROOT/.$target/skills/${skill_name}/SKILL.md"
 
   [ -f "$src" ] || { err "Source not found: $src"; return 1; }
 
-  prepare_dir "$(dirname "$dst_opencode")"
-  prepare_dir "$(dirname "$dst_claude")"
+  prepare_dir "$(dirname "$dst_root")"
 
-  ln -sf "$src" "$dst_opencode"
-  ln -sf "$src" "$dst_claude"
-  log "skill:          ${skill_name} → .opencode/skills/ & .claude/skills/"
+  ln -sf "$src" "$dst_root"
+  log "skill:          ${skill_name} → .$target/skills/"
 }
 
 # ---------------------------------------------------------------------------
-# Generate opencode.json snippet
+# Merge opencode.json directly
 # ---------------------------------------------------------------------------
-generate_opencode_snippet() {
-  local snippet_file="$PROJECT_ROOT/.opencode/agent-models.generated.json"
+merge_opencode_config() {
+  local config_file="$PROJECT_ROOT/opencode.json"
 
-  python3 -c "
-import json, sys
+  python3 - "$config_file" "$MODELS_FILE" <<'PY'
+import json
+import pathlib
+import re
+import sys
 
-with open('$MODELS_FILE') as f:
-    data = json.load(f)
+config_path = pathlib.Path(sys.argv[1])
+models_path = pathlib.Path(sys.argv[2])
 
-agents = data.get('opencode', {})
-config = {
-    '\$schema': 'https://opencode.ai/config.json',
-    'agent': {}
-}
+def strip_jsonc(text: str) -> str:
+    out = []
+    i = 0
+    in_string = False
+    escape = False
+    line_comment = False
+    block_comment = False
 
-for name, model in agents.items():
-    config['agent'][name] = {
-        'model': model,
-        'mode': 'subagent'
-    }
+    while i < len(text):
+        ch = text[i]
+        nxt = text[i + 1] if i + 1 < len(text) else ""
 
-with open('$snippet_file', 'w') as f:
-    json.dump(config, f, indent=2)
-" 2>/dev/null || {
-    warn "Could not generate opencode.json snippet. Merge manually:"
-    echo ""
-    for agent in planner task-splitter implementer pr-creator; do
-      local model
-      model=$(get_model "opencode" "$agent")
-      echo "  \"$agent\": { \"model\": \"$model\", \"mode\": \"subagent\" }"
-    done
-    return
-  }
+        if line_comment:
+            if ch in "\r\n":
+                line_comment = False
+                out.append(ch)
+            i += 1
+            continue
 
-  log "Generated: .opencode/agent-models.generated.json"
-  info "Merge the 'agent' section into your opencode.json manually."
+        if block_comment:
+            if ch == "*" and nxt == "/":
+                block_comment = False
+                i += 2
+            else:
+                i += 1
+            continue
+
+        if in_string:
+            out.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+
+        if ch == "/" and nxt == "/":
+            line_comment = True
+            i += 2
+            continue
+
+        if ch == "/" and nxt == "*":
+            block_comment = True
+            i += 2
+            continue
+
+        out.append(ch)
+        i += 1
+
+    text = "".join(out)
+    text = re.sub(r",(?=\s*[}\]])", "", text)
+    return text
+
+
+def load_config(path: pathlib.Path) -> dict:
+    if not path.exists():
+        return {}
+
+    raw = path.read_text()
+    try:
+        data = json.loads(raw)
+    except Exception:
+        data = json.loads(strip_jsonc(raw))
+
+    if not isinstance(data, dict):
+        raise SystemExit(f"{path} must contain a JSON object")
+
+    return data
+
+
+models = json.loads(models_path.read_text())
+opencode_models = models.get("opencode", {})
+agent = {}
+
+for name in ("planner", "task-splitter", "implementer", "pr-creator"):
+    model = opencode_models.get(name, "")
+    if model:
+        agent[name] = {"model": model, "mode": "subagent"}
+
+data = load_config(config_path)
+if "$schema" not in data:
+    data = {"$schema": "https://opencode.ai/config.json", **data}
+
+existing_agent = data.get("agent", {})
+if existing_agent and not isinstance(existing_agent, dict):
+    raise SystemExit(f"{config_path} agent section must be an object")
+
+merged_agent = dict(existing_agent)
+merged_agent.update(agent)
+data["agent"] = merged_agent
+
+config_path.write_text(json.dumps(data, indent=2) + "\n")
+PY
+
+  log "opencode config: $config_file"
 }
 
 # ============================================================================
 # Main
 # ============================================================================
 
+parse_args "$@"
+
+if [ -z "$TARGET" ]; then
+  if [ -t 0 ] && [ "$TARGET_EXPLICIT" -eq 0 ]; then
+    prompt_target
+  else
+    TARGET="both"
+  fi
+fi
+
+TARGET="$(normalize_target "$TARGET")" || {
+  err "Invalid target: $TARGET"
+  usage
+  exit 1
+}
+
 echo ""
 echo -e "${CYAN}========================================${NC}"
 echo -e "${CYAN}  Subagent Stack Installer${NC}"
+echo -e "${CYAN}  Target: ${TARGET}${NC}"
 echo -e "${CYAN}========================================${NC}"
 echo ""
 
 [ -f "$MODELS_FILE" ] || { err "models.json not found at $MODELS_FILE"; exit 1; }
+[ -f "$INSTALL_AGENTS_FILE" ] || { err "AGENTS.md not found at $INSTALL_AGENTS_FILE"; exit 1; }
+
+install_project_agents_file
 
 # --- Agents ---
-info "Installing agents..."
-for agent in planner task-splitter implementer pr-creator; do
-  install_opencode_agent "$agent"
-  install_claude_agent "$agent"
-done
+echo ""
+case "$TARGET" in
+  opencode)
+    info "Installing opencode assets..."
+    for agent in planner task-splitter implementer pr-creator; do
+      install_opencode_agent "$agent"
+    done
+    echo ""
+    info "Merging opencode config..."
+    merge_opencode_config
+    ;;
+  claude)
+    info "Installing Claude Code assets..."
+    for agent in planner task-splitter implementer pr-creator; do
+      install_claude_agent "$agent"
+    done
+    ;;
+  both)
+    info "Installing opencode assets..."
+    for agent in planner task-splitter implementer pr-creator; do
+      install_opencode_agent "$agent"
+    done
+    echo ""
+    info "Merging opencode config..."
+    merge_opencode_config
+    echo ""
+    info "Installing Claude Code assets..."
+    for agent in planner task-splitter implementer pr-creator; do
+      install_claude_agent "$agent"
+    done
+    ;;
+esac
 
 # --- Commands ---
 echo ""
 info "Installing slash commands..."
+case "$TARGET" in
+  opencode) command_targets=(opencode) ;;
+  claude) command_targets=(claude) ;;
+  both) command_targets=(opencode claude) ;;
+esac
 for cmd in planner tasks implement pr-ready; do
-  install_commands "$cmd"
+  for runtime_target in "${command_targets[@]}"; do
+    install_commands_for_target "$runtime_target" "$cmd"
+  done
 done
 
 # --- Skills ---
 echo ""
 info "Installing skills..."
+case "$TARGET" in
+  opencode) skill_targets=(opencode) ;;
+  claude) skill_targets=(claude) ;;
+  both) skill_targets=(opencode claude) ;;
+esac
 for skill_dir in "$SRC_DIR"/skills/*/; do
   skill_name=$(basename "$skill_dir")
   [ "$skill_name" = "_template" ] && continue
-  [ -f "$skill_dir/SKILL.md" ] && install_skills "$skill_name"
+  [ -f "$skill_dir/SKILL.md" ] || continue
+  for runtime_target in "${skill_targets[@]}"; do
+    install_skills_for_target "$runtime_target" "$skill_name"
+  done
 done
-
-# Install template skill for reference
-if [ -f "$SRC_DIR/skills/_template/SKILL.md" ]; then
-  install_skills "_template"
-fi
-
-# --- opencode.json snippet ---
-echo ""
-generate_opencode_snippet
 
 # --- Final instructions ---
 echo ""
@@ -220,23 +430,16 @@ echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Installation complete!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
-echo "Next steps:"
-echo ""
-echo "  1. Merge .opencode/agent-models.generated.json into your opencode.json"
-echo "     or add the 'agent' section directly:"
-echo ""
-echo '     "agent": {'
-echo '       "planner":       { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },'
-echo '       "task-splitter": { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },'
-echo '       "implementer":   { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },'
-echo '       "pr-creator":    { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" }'
-echo '     }'
-echo ""
-echo "  2. Copy AGENTS.md to your target project root if not already there."
-echo ""
-echo "  3. Available slash commands:"
-echo "     /planner \"description\"   — Interactive requirement planning"
-echo "     /tasks                    — Decompose plan into atomic tasks"
-echo "     /implement <task-id>      — Implement a task (clean architecture)"
-echo "     /pr-ready                 — Test, commit, and create PR"
+echo "Installed to project root: AGENTS.md"
+case "$TARGET" in
+  opencode)
+    echo "Installed: .opencode/, opencode.json"
+    ;;
+  claude)
+    echo "Installed: .claude/"
+    ;;
+  both)
+    echo "Installed: .opencode/, .claude/, opencode.json"
+    ;;
+esac
 echo ""

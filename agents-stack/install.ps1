@@ -1,9 +1,11 @@
 # ============================================================================
 # Subagent Stack Installer (Windows PowerShell)
-# Installs agent configs for both opencode and Claude Code
+# Installs agent configs for opencode, Claude Code, or both
 # ============================================================================
 
-param()
+param(
+    [string]$Target = ""
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -11,13 +13,55 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 $SrcDir = $ScriptDir
 $ModelsFile = Join-Path $SrcDir "models.json"
+$InstallAgentsFile = Join-Path $SrcDir "AGENTS.md"
+
+function Show-Usage {
+    Write-Host "Usage: .\install.ps1 [-Target opencode|claude|both]" -ForegroundColor Cyan
+}
+
+function Normalize-Target($Value) {
+    switch ($Value.ToLowerInvariant()) {
+        "opencode" { return "opencode" }
+        "claude"   { return "claude" }
+        "both"     { return "both" }
+        default     { return $null }
+    }
+}
+
+if ($args -contains "-h" -or $args -contains "--help") {
+    Show-Usage
+    exit 0
+}
+
+if ([string]::IsNullOrWhiteSpace($Target)) {
+    if (-not [Console]::IsInputRedirected) {
+        $Target = Read-Host "Choose installation target (opencode/claude/both) [both]"
+        if ([string]::IsNullOrWhiteSpace($Target)) {
+            $Target = "both"
+        }
+    } else {
+        $Target = "both"
+    }
+}
 
 if (-not (Test-Path $ModelsFile)) {
     Write-Host "[✗] models.json not found at $ModelsFile" -ForegroundColor Red
     exit 1
 }
 
+if (-not (Test-Path $InstallAgentsFile)) {
+    Write-Host "[✗] AGENTS.md not found at $InstallAgentsFile" -ForegroundColor Red
+    exit 1
+}
+
 $Models = Get-Content $ModelsFile | ConvertFrom-Json
+
+$Target = Normalize-Target $Target
+if (-not $Target) {
+    Write-Host "[✗] Invalid target. Use opencode, claude, or both." -ForegroundColor Red
+    Show-Usage
+    exit 1
+}
 
 function Get-Model($Tool, $Agent) {
     $m = $Models.$Tool.$Agent
@@ -28,6 +72,12 @@ function Prepare-Dir($Dir) {
     if (-not (Test-Path $Dir)) {
         New-Item -ItemType Directory -Path $Dir -Force | Out-Null
     }
+}
+
+function Install-ProjectAgentsFile {
+    $dst = Join-Path $ProjectRoot "AGENTS.md"
+    Copy-Item $InstallAgentsFile $dst -Force
+    Write-Host "[✓] project AGENTS: $dst" -ForegroundColor Green
 }
 
 function Install-OpenCodeAgent($AgentName) {
@@ -69,40 +119,92 @@ function Install-ClaudeAgent($AgentName) {
     }
 }
 
-function Install-Commands($CmdName) {
+function Install-Commands($TargetName, $CmdName) {
     $src = Join-Path $SrcDir "commands" "$CmdName.md"
-    $dstOpenCode = Join-Path $ProjectRoot ".opencode" "commands" "$CmdName.md"
-    $dstClaude = Join-Path $ProjectRoot ".claude" "commands" "$CmdName.md"
+    $dst = Join-Path $ProjectRoot ".$TargetName" "commands" "$CmdName.md"
 
     if (-not (Test-Path $src)) {
         Write-Host "[✗] Source not found: $src" -ForegroundColor Red
         return
     }
 
-    Prepare-Dir (Split-Path $dstOpenCode -Parent)
-    Prepare-Dir (Split-Path $dstClaude -Parent)
+    Prepare-Dir (Split-Path $dst -Parent)
 
-    New-Item -ItemType SymbolicLink -Path $dstOpenCode -Target $src -Force | Out-Null
-    New-Item -ItemType SymbolicLink -Path $dstClaude -Target $src -Force | Out-Null
-    Write-Host "[✓] command:        $CmdName → .opencode/commands/ & .claude/commands/" -ForegroundColor Green
+    New-Item -ItemType SymbolicLink -Path $dst -Target $src -Force | Out-Null
+    Write-Host "[✓] command:        $CmdName → .$TargetName/commands/" -ForegroundColor Green
 }
 
-function Install-Skills($SkillName) {
+function Install-Skills($TargetName, $SkillName) {
     $src = Join-Path $SrcDir "skills" $SkillName "SKILL.md"
-    $dstOpenCode = Join-Path $ProjectRoot ".opencode" "skills" $SkillName "SKILL.md"
-    $dstClaude = Join-Path $ProjectRoot ".claude" "skills" $SkillName "SKILL.md"
+    $dst = Join-Path $ProjectRoot ".$TargetName" "skills" $SkillName "SKILL.md"
 
     if (-not (Test-Path $src)) {
         Write-Host "[✗] Source not found: $src" -ForegroundColor Red
         return
     }
 
-    Prepare-Dir (Split-Path $dstOpenCode -Parent)
-    Prepare-Dir (Split-Path $dstClaude -Parent)
+    Prepare-Dir (Split-Path $dst -Parent)
 
-    New-Item -ItemType SymbolicLink -Path $dstOpenCode -Target $src -Force | Out-Null
-    New-Item -ItemType SymbolicLink -Path $dstClaude -Target $src -Force | Out-Null
-    Write-Host "[✓] skill:          $SkillName → .opencode/skills/ & .claude/skills/" -ForegroundColor Green
+    New-Item -ItemType SymbolicLink -Path $dst -Target $src -Force | Out-Null
+    Write-Host "[✓] skill:          $SkillName → .$TargetName/skills/" -ForegroundColor Green
+}
+
+function Merge-OpenCodeConfig {
+    $dst = Join-Path $ProjectRoot "opencode.json"
+    $agent = [ordered]@{}
+
+    foreach ($name in @("planner", "task-splitter", "implementer", "pr-creator")) {
+        $model = Get-Model "opencode" $name
+        if ($model) {
+            $agent[$name] = [ordered]@{
+                model = $model
+                mode  = "subagent"
+            }
+        }
+    }
+
+    $existing = $null
+    if (Test-Path $dst) {
+        $raw = Get-Content $dst -Raw
+        try {
+            $existing = $raw | ConvertFrom-Json
+        } catch {
+            Write-Host "[✗] opencode.json must be valid JSON for automatic merge." -ForegroundColor Red
+            throw
+        }
+    } else {
+        $existing = [ordered]@{}
+    }
+
+    if (-not $existing.PSObject.Properties.Match("`$schema").Count) {
+        $merged = [ordered]@{ "`$schema" = "https://opencode.ai/config.json" }
+        foreach ($prop in $existing.PSObject.Properties) {
+            $merged[$prop.Name] = $prop.Value
+        }
+        $existing = $merged
+    }
+
+    if (-not $existing.PSObject.Properties.Match("agent").Count) {
+        $existing | Add-Member -NotePropertyName agent -NotePropertyValue ([ordered]@{})
+    }
+
+    if ($existing.agent -is [pscustomobject]) {
+        $currentAgent = [ordered]@{}
+        foreach ($prop in $existing.agent.PSObject.Properties) {
+            $currentAgent[$prop.Name] = $prop.Value
+        }
+        $existing.agent = $currentAgent
+    } elseif ($existing.agent -isnot [System.Collections.IDictionary]) {
+        Write-Host "[✗] opencode.json agent section must be an object." -ForegroundColor Red
+        exit 1
+    }
+
+    foreach ($prop in $agent.GetEnumerator()) {
+        $existing.agent[$prop.Key] = $prop.Value
+    }
+
+    $existing | ConvertTo-Json -Depth 20 | Set-Content $dst -NoNewline
+    Write-Host "[✓] opencode config: $dst" -ForegroundColor Green
 }
 
 # ============================================================================
@@ -112,21 +214,61 @@ function Install-Skills($SkillName) {
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  Subagent Stack Installer (Windows)" -ForegroundColor Cyan
+Write-Host "  Target: $Target" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# --- Agents ---
-Write-Host "[→] Installing agents..." -ForegroundColor Cyan
-@("planner", "task-splitter", "implementer", "pr-creator") | ForEach-Object {
-    Install-OpenCodeAgent $_
-    Install-ClaudeAgent $_
+Install-ProjectAgentsFile
+
+switch ($Target) {
+    "opencode" { $RuntimeTargets = @("opencode") }
+    "claude"   { $RuntimeTargets = @("claude") }
+    default     { $RuntimeTargets = @("opencode", "claude") }
+}
+
+switch ($Target) {
+    "opencode" {
+        Write-Host "[→] Installing opencode assets..." -ForegroundColor Cyan
+        @("planner", "task-splitter", "implementer", "pr-creator") | ForEach-Object {
+            Install-OpenCodeAgent $_
+        }
+
+        Write-Host ""
+        Write-Host "[→] Merging opencode config..." -ForegroundColor Cyan
+        Merge-OpenCodeConfig
+    }
+    "claude" {
+        Write-Host "[→] Installing Claude Code assets..." -ForegroundColor Cyan
+        @("planner", "task-splitter", "implementer", "pr-creator") | ForEach-Object {
+            Install-ClaudeAgent $_
+        }
+    }
+    default {
+        Write-Host "[→] Installing opencode assets..." -ForegroundColor Cyan
+        @("planner", "task-splitter", "implementer", "pr-creator") | ForEach-Object {
+            Install-OpenCodeAgent $_
+        }
+
+        Write-Host ""
+        Write-Host "[→] Merging opencode config..." -ForegroundColor Cyan
+        Merge-OpenCodeConfig
+
+        Write-Host ""
+        Write-Host "[→] Installing Claude Code assets..." -ForegroundColor Cyan
+        @("planner", "task-splitter", "implementer", "pr-creator") | ForEach-Object {
+            Install-ClaudeAgent $_
+        }
+    }
 }
 
 # --- Commands ---
 Write-Host ""
 Write-Host "[→] Installing slash commands..." -ForegroundColor Cyan
 @("planner", "tasks", "implement", "pr-ready") | ForEach-Object {
-    Install-Commands $_
+    $cmd = $_
+    $RuntimeTargets | ForEach-Object {
+        Install-Commands $_ $cmd
+    }
 }
 
 # --- Skills ---
@@ -139,7 +281,9 @@ if (Test-Path $skillDir) {
         # Skip _template by default (but install on demand)
         $skillFile = Join-Path $_.FullName "SKILL.md"
         if (Test-Path $skillFile) {
-            Install-Skills $skillName
+            $RuntimeTargets | ForEach-Object {
+                Install-Skills $_ $skillName
+            }
         }
     }
 }
@@ -150,22 +294,10 @@ Write-Host "========================================" -ForegroundColor Green
 Write-Host "  Installation complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Next steps:"
-Write-Host ""
-Write-Host "  1. Add this to your opencode.json:"
-Write-Host ""
-Write-Host '     "agent": {'
-Write-Host '       "planner":       { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },'
-Write-Host '       "task-splitter": { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },'
-Write-Host '       "implementer":   { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },'
-Write-Host '       "pr-creator":    { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" }'
-Write-Host '     }'
-Write-Host ""
-Write-Host "  2. Copy AGENTS.md to your target project root."
-Write-Host ""
-Write-Host "  3. Available slash commands:"
-Write-Host "     /planner `"description`"   — Interactive requirement planning"
-Write-Host "     /tasks                    — Decompose plan into atomic tasks"
-Write-Host "     /implement <task-id>      — Implement a task (clean architecture)"
-Write-Host "     /pr-ready                 — Test, commit, and create PR"
+Write-Host "Installed AGENTS.md at project root."
+switch ($Target) {
+    "opencode" { Write-Host "Installed: .opencode/, opencode.json" }
+    "claude"   { Write-Host "Installed: .claude/" }
+    default     { Write-Host "Installed: .opencode/, .claude/, opencode.json" }
+}
 Write-Host ""

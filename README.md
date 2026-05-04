@@ -20,16 +20,23 @@ con **opencode** y **Claude Code**.
 
 ```bash
 cp -r agents-stack/ /ruta/de/tu/proyecto/
-cp AGENTS.md /ruta/de/tu/proyecto/
 ```
 
 ### 2. Ejecutá el instalador
 
 ```bash
 cd /ruta/de/tu/proyecto/agents-stack
-./install.sh          # macOS / Linux
+./install.sh --target opencode   # macOS / Linux
 # o
-.\install.ps1         # Windows PowerShell
+./install.sh --target claude
+# o
+./install.sh --target both
+# o
+.\install.ps1 -Target opencode  # Windows PowerShell
+# o
+.\install.ps1 -Target claude
+# o
+.\install.ps1 -Target both
 ```
 
 Esto crea:
@@ -42,13 +49,14 @@ Esto crea:
 | `.claude/commands/` | Comandos slash (ídem) |
 | `.opencode/skills/` | Skills de lenguajes (symlinks) |
 | `.claude/skills/` | Skills de lenguajes (symlinks) |
+| `AGENTS.md` | Instrucciones del proyecto para opencode |
 
 ### 3. Configurá los modelos
 
 #### opencode
 
-Agregá la sección `agent` a tu `opencode.json`. El instalador genera un snippet
-en `.opencode/agent-models.generated.json` que podés copiar.
+El instalador agrega automáticamente la sección `agent` a tu `opencode.json`.
+Si el archivo no existe, lo crea.
 
 ```jsonc
 {
