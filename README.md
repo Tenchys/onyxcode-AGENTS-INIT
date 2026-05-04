@@ -19,14 +19,14 @@ con **opencode** y **Claude Code**.
 ### 1. Copiá los archivos a tu proyecto
 
 ```bash
-cp -r src/ /ruta/de/tu/proyecto/
+cp -r agents-stack/ /ruta/de/tu/proyecto/
 cp AGENTS.md /ruta/de/tu/proyecto/
 ```
 
 ### 2. Ejecutá el instalador
 
 ```bash
-cd /ruta/de/tu/proyecto/src
+cd /ruta/de/tu/proyecto/agents-stack
 ./install.sh          # macOS / Linux
 # o
 .\install.ps1         # Windows PowerShell
@@ -67,7 +67,7 @@ Ajustá los IDs de modelo según los que tengas configurados en tu provider.
 #### Claude Code
 
 No requiere configuración adicional. Los modelos ya se inyectan desde
-`src/models.json` durante la instalación. Si querés cambiar un modelo, editá
+`agents-stack/models.json` durante la instalación. Si querés cambiar un modelo, editá
 ese archivo y volvé a ejecutar `./install.sh`.
 
 ## Uso
@@ -124,13 +124,13 @@ proyecto. Para agregar un nuevo lenguaje:
 
 ```bash
 # 1. Copiá el template
-cp -r src/skills/_template src/skills/python
+cp -r agents-stack/skills/_template agents-stack/skills/python
 
 # 2. Editá el SKILL.md con las convenciones del lenguaje
-vim src/skills/python/SKILL.md
+vim agents-stack/skills/python/SKILL.md
 
 # 3. Re-ejecutá el instalador
-./src/install.sh
+./agents-stack/install.sh
 ```
 
 La skill debe llamarse `<lenguaje>-patterns` (ej. `python-patterns`,
@@ -138,7 +138,7 @@ La skill debe llamarse `<lenguaje>-patterns` (ej. `python-patterns`,
 
 ## Cambiar modelos
 
-Editá `src/models.json` y volvé a ejecutar `./install.sh`:
+Editá `agents-stack/models.json` y volvé a ejecutar `./agents-stack/install.sh`:
 
 ```json
 {
@@ -162,14 +162,14 @@ Editá `src/models.json` y volvé a ejecutar `./install.sh`:
 ```
 tu-proyecto/
 ├── .opencode/
-│   ├── agents/           → symlinks a src/agents/
-│   ├── commands/         → symlinks a src/commands/
-│   └── skills/           → symlinks a src/skills/
+│   ├── agents/           → symlinks a agents-stack/agents/
+│   ├── commands/         → symlinks a agents-stack/commands/
+│   └── skills/           → symlinks a agents-stack/skills/
 ├── .claude/
 │   ├── agents/           → copias con modelo inyectado
-│   ├── commands/         → symlinks a src/commands/
-│   └── skills/           → symlinks a src/skills/
-├── src/
+│   ├── commands/         → symlinks a agents-stack/commands/
+│   └── skills/           → symlinks a agents-stack/skills/
+├── agents-stack/
 │   ├── models.json       → configuración de modelos
 │   ├── agents/           → definiciones fuente de los subagentes
 │   ├── commands/         → definiciones de comandos slash

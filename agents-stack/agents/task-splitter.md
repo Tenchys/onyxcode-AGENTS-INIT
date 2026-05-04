@@ -5,8 +5,6 @@ permission:
   edit: allow
   bash: deny
   task: allow
-tools: Read, Glob, Grep, Write
-disallowedTools: Bash
 hidden: false
 ---
 

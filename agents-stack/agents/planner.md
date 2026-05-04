@@ -7,8 +7,6 @@ permission:
   task: allow
   webfetch: allow
   question: allow
-tools: Read, Glob, Grep
-disallowedTools: Write, Edit, Bash
 hidden: false
 ---
 

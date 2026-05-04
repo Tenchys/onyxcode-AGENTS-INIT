@@ -1,0 +1,14 @@
+{
+  "opencode": {
+    "planner":       "opencode-go/deepseek-v4-pro",
+    "task-splitter": "opencode-go/deepseek-v4-flash",
+    "implementer":   "opencode-go/minimax-m2.7",
+    "pr-creator":    "opencode-go/deepseek-v4-flash"
+  },
+  "claude": {
+    "planner":       "sonnet",
+    "task-splitter": "haiku",
+    "implementer":   "sonnet",
+    "pr-creator":    "haiku"
+  }
+}

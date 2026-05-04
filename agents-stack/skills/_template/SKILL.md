@@ -14,7 +14,7 @@ Provide language-specific coding conventions for the implementer subagent.
 
 ## How to Create a New Skill
 
-1. Copy this entire directory to `src/skills/<language-name>/`
+1. Copy this entire directory to `agents-stack/skills/<language-name>/`
 2. Edit `SKILL.md` — update the `name`, `description`, and body below.
 3. The implementer will call `skill({ name: "<language-name>-patterns" })`.
 
@@ -24,7 +24,7 @@ Provide language-specific coding conventions for the implementer subagent.
 
 - Directory structure convention for this language:
   ```
-  src/
+  agents-stack/
     domain/          # Entities, value objects, domain exceptions
     application/     # Use cases, ports (interfaces)
     infrastructure/  # Adapters (DB, HTTP, messaging implementations)

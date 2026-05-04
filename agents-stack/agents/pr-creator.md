@@ -21,8 +21,6 @@ permission:
     "go test*": allow
     "cargo test*": allow
   task: allow
-tools: Read, Glob, Grep, Bash, Write
-disallowedTools: Edit
 hidden: false
 ---
 
