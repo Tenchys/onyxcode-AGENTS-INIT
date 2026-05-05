@@ -153,7 +153,7 @@ function Merge-OpenCodeConfig {
     $dst = Join-Path $ProjectRoot "opencode.json"
     $agent = [ordered]@{}
 
-    foreach ($name in @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator")) {
+    foreach ($name in @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor")) {
         $model = Get-Model "opencode" $name
         if ($model) {
             $agent[$name] = [ordered]@{
@@ -229,7 +229,7 @@ switch ($Target) {
 switch ($Target) {
     "opencode" {
         Write-Host "[→] Installing opencode assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator") | ForEach-Object {
+        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-OpenCodeAgent $_
         }
 
@@ -239,13 +239,13 @@ switch ($Target) {
     }
     "claude" {
         Write-Host "[→] Installing Claude Code assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator") | ForEach-Object {
+        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-ClaudeAgent $_
         }
     }
     default {
         Write-Host "[→] Installing opencode assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator") | ForEach-Object {
+        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-OpenCodeAgent $_
         }
 
@@ -255,7 +255,7 @@ switch ($Target) {
 
         Write-Host ""
         Write-Host "[→] Installing Claude Code assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator") | ForEach-Object {
+        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-ClaudeAgent $_
         }
     }
@@ -264,7 +264,7 @@ switch ($Target) {
 # --- Commands ---
 Write-Host ""
 Write-Host "[→] Installing slash commands..." -ForegroundColor Cyan
-@("planner", "tasks", "implement", "validate", "fix", "pr-ready") | ForEach-Object {
+@("planner", "tasks", "implement", "validate", "fix", "pr-ready", "plan-extend", "readme", "context", "reference") | ForEach-Object {
     $cmd = $_
     $RuntimeTargets | ForEach-Object {
         Install-Commands $_ $cmd
@@ -278,7 +278,7 @@ $skillDir = Join-Path $SrcDir "skills"
 if (Test-Path $skillDir) {
     Get-ChildItem $skillDir -Directory | ForEach-Object {
         $skillName = $_.Name
-        # Skip _template by default (but install on demand)
+        if ($skillName -eq "_template") { continue }
         $skillFile = Join-Path $_.FullName "SKILL.md"
         if (Test-Path $skillFile) {
             $RuntimeTargets | ForEach-Object {

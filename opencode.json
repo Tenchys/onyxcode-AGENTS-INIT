@@ -24,6 +24,18 @@
     "pr-creator": {
       "model": "opencode-go/deepseek-v4-flash",
       "mode": "subagent"
+    },
+    "readme-generator": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "mode": "subagent"
+    },
+    "context-generator": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "mode": "subagent"
+    },
+    "reference-extractor": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "mode": "subagent"
     }
   }
 }

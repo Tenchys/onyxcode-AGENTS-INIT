@@ -15,12 +15,72 @@ commands below.
 
 | Stage | Command | Subagent | What it does |
 |-------|---------|----------|--------------|
-| 1 | `/planner "description"` | @planner | Clarifies requirements interactively, produces `plan.md` |
+| 1 | `/planner "description"` | @planner | Clarifies requirements interactively, produces `plan.md`. Reads `docs/context/` if available. |
 | 2 | `/tasks` | @task-splitter | Reads `plan.md`, decomposes into atomic tasks in `tasks.md` |
 | 3 | `/implement <task-id>` | @implementer | Implements one task with clean architecture + unit tests |
 | 4 | `/validate <task-id>` | @validator | Validates implementation against plan, runs tests, classifies issues (minor/major) |
 | 5 | `/fix <task-id>` | @fixer | Applies surgical fixes for minor validation issues (major issues go back to `/planner`) |
 | 6 | `/pr-ready` | @pr-creator | Runs tests, creates commit + PR with results report |
+
+## Utility Commands
+
+These commands run independently of the pipeline.
+
+### `/context` — Project Context Documentation
+
+Generates and maintains structured business/domain documentation about your
+project. The `@planner` automatically reads this context if it exists, giving
+it deep knowledge of your project before planning.
+
+| Command | When | What it does |
+|---------|------|--------------|
+| `/context` | First run | Interactive Q&A for all 3 sections: overview, tech stack, roadmap |
+| `/context` | Re-run | Update mode — shows current content, asks what changed |
+| `/context --add <name>` | Anytime | Adds a new custom section (e.g., `--add domain-model`) |
+
+**Examples:**
+
+```bash
+# First time — interactive Q&A for all sections
+opencode run "/context"
+
+# Update the roadmap after a milestone
+opencode run "/context"
+
+# Add a new custom section
+opencode run "/context --add domain-model"
+```
+
+**How it integrates:**
+
+```
+/context (on demand)
+     ↓
+docs/context/  ──read by──→  @planner (if exists)
+                                  ↓
+                            /planner → /tasks → /implement → ...
+```
+
+### `/reference` — Repository Reference Importer
+
+Imports an external repository reference into `docs/references/`. Fetches the
+repo structure via GitHub/GitLab API and saves it as a single `.md` file with
+the URL + filtered project tree — so AI agents can understand a dependency
+without browsing the full repo.
+
+```bash
+# Import a GitHub repo reference
+opencode run "/reference --repo https://github.com/user/repo"
+```
+
+### `/readme` — README Generator
+
+Generates a professional `README.md` with auto-detected stack, prerequisites,
+scripts, and test commands.
+
+```bash
+opencode run "/readme"
+```
 
 ## Setup
 

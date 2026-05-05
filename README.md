@@ -1,182 +1,201 @@
-# Stack de Subagentes
+# AGENTS — Subagent Pipeline
 
-Pipeline de 4 subagentes para desarrollo de software asistido por IA, compatible
-con **opencode** y **Claude Code**.
+AI-assisted software development pipeline with 6 subagent stages.
+Compatible with **opencode** and **Claude Code**.
 
 ```
-/planner    →  /tasks    →  /implement  →  /pr-ready
-(planear)      (dividir)    (construir)    (publicar)
+/planner  →  /tasks  →  /implement  →  /validate  →  /fix(optional)  →  /pr-ready
+(plan)       (split)     (build)         (verify)       (repair)           (ship)
 ```
 
-## Requisitos
+## Requirements
 
-- [opencode](https://opencode.ai) o [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
-- Python 3 (viene preinstalado en macOS y la mayoría de distribuciones Linux)
+- [opencode](https://opencode.ai) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)
+- Python 3
 - Git
 
-## Instalación
+## Installation
 
-Copia el directorio `agents-stack/` a la raíz de tu proyecto y ejecuta el
-instalador:
+Copy `agents-stack/` to your project root and run the installer:
 
 ```bash
-cp -r agents-stack/ /ruta/de/tu/proyecto/
-cd /ruta/de/tu/proyecto/agents-stack
-./install.sh --target both   # opencode + Claude Code
-# o usa un target específico:
+cp -r agents-stack/ /path/to/your/project/
+cd /path/to/your/project/agents-stack
+./install.sh --target both
+# or:
 #   ./install.sh --target opencode
 #   ./install.sh --target claude
 # Windows PowerShell:
 #   .\install.ps1 -Target both
 ```
 
-Esto crea:
+This creates:
 
-| Directorio | Contenido |
-|------------|-----------|
-| `.opencode/agents/` | Symlinks a los agentes |
-| `.claude/agents/` | Copias con modelo inyectado |
-| `.opencode/commands/` | Comandos slash (`/planner`, `/tasks`, `/implement`, `/pr-ready`) |
-| `.claude/commands/` | Comandos slash |
-| `.opencode/skills/` | Skills de lenguaje/framework (symlinks) |
-| `.claude/skills/` | Skills de lenguaje/framework (symlinks) |
-| `AGENTS.md` | Instrucciones del pipeline |
+| Directory | Contents |
+|-----------|----------|
+| `.opencode/agents/` | Symlinks to agent definitions |
+| `.claude/agents/` | Copies with injected model config |
+| `.opencode/commands/` | Slash commands (`/planner`, `/tasks`, `/implement`, `/validate`, `/fix`, `/pr-ready`, `/context`, `/readme`, `/reference`) |
+| `.claude/commands/` | Slash commands (same set) |
+| `.opencode/skills/` | Language/framework skill symlinks |
+| `.claude/skills/` | Language/framework skill symlinks |
+| `opencode.json` | Auto-generated model configuration |
+| `AGENTS.md` | Pipeline documentation |
 
-## Configurar modelos
+## Configure Models
 
-Los modelos se definen en `agents-stack/models.json`, la fuente única de
-verdad. El instalador lee este archivo y genera `opencode.json`
-automáticamente.
+Models are defined in `agents-stack/models.json` (single source of truth).
+The installer reads this file and generates `opencode.json` automatically.
 
 ```json
 {
   "opencode": {
-    "planner":       "opencode-go/deepseek-v4-pro",
-    "task-splitter": "opencode-go/deepseek-v4-flash",
-    "implementer":   "opencode-go/minimax-m2.7",
-    "pr-creator":    "opencode-go/deepseek-v4-flash"
+    "planner":             "opencode-go/deepseek-v4-pro",
+    "task-splitter":       "opencode-go/deepseek-v4-flash",
+    "implementer":         "opencode-go/minimax-m2.7",
+    "validator":           "opencode-go/deepseek-v4-flash",
+    "fixer":               "opencode-go/deepseek-v4-flash",
+    "pr-creator":          "opencode-go/deepseek-v4-flash",
+    "readme-generator":    "opencode-go/deepseek-v4-flash",
+    "context-generator":   "opencode-go/deepseek-v4-flash",
+    "reference-extractor": "opencode-go/deepseek-v4-flash"
   },
   "claude": {
     "planner":       "sonnet",
     "task-splitter": "haiku",
     "implementer":   "sonnet",
-    "pr-creator":    "haiku"
+    "validator":     "haiku",
+    "fixer":         "haiku",
+    "pr-creator":    "haiku",
+    "readme-generator":    "haiku",
+    "context-generator":   "haiku",
+    "reference-extractor": "haiku"
   }
 }
 ```
 
-Para cambiar un modelo, edita `agents-stack/models.json` y vuelve a ejecutar
-el instalador:
-
-```bash
-./agents-stack/install.sh --target both
-```
-
-Para Claude Code no se requiere configuración adicional — los modelos se
-inyectan desde `models.json` durante la instalación.
-
-## Uso
-
-### Flujo completo
-
-```bash
-# 1. Planificar
-/planner "Agregar autenticación con OAuth a la API"
-
-# 2. Dividir en tareas
-/tasks
-
-# 3. Implementar tarea por tarea
-/implement 1
-/implement 2
-/implement 3
-
-# 4. Crear PR
-/pr-ready
-```
-
-### Con opencode
-
-```bash
-opencode run "/planner Agregar tema oscuro a la configuración"
-opencode run "/tasks"
-opencode run "/implement 1"
-opencode run "/pr-ready"
-```
-
-### Con Claude Code
-
-```bash
-claude -p "/planner Agregar autenticación con OAuth"
-claude -p "/tasks"
-claude -p "/implement 3"
-claude -p "/pr-ready"
-```
-
-## Subagentes
-
-| Agente | Descripción | Modelo sugerido |
-|--------|-------------|-----------------|
-| **planner** | Planifica requerimientos haciendo preguntas interactivas hasta cubrir todo el contexto. Genera `plan.md`. | Sonnet / Opus |
-| **task-splitter** | Lee `plan.md` y lo descompone en tareas atómicas con specs de tests unitarios y E2E. Genera `tasks.md`. | Haiku |
-| **implementer** | Detecta el stack (lenguaje + framework), carga la skill correspondiente, implementa con clean architecture y código comentado. | Sonnet / Opus |
-| **pr-creator** | Corre tests, resume cambios, crea commit y PR, verifica conflictos con `main`. | Haiku |
-
-## Agregar skills de lenguajes y frameworks
-
-El implementer detecta el lenguaje y framework del proyecto y carga la skill
-correspondiente con esta precedencia:
-
-1. `<framework>-patterns` (ej. `fastapi-patterns`, `django-patterns`)
-2. `<lenguaje>-patterns` (ej. `python-patterns`, `go-patterns`)
-3. Si ninguna existe, usa el `_template` como fallback
-
-El mapeo de dependencias a frameworks está definido en
-`agents-stack/agents/implementer.md`.
-
-### Skill de lenguaje (fallback genérico)
-
-```bash
-cp -r agents-stack/skills/_template agents-stack/skills/python
-vim agents-stack/skills/python/SKILL.md
-```
-
-### Skill de framework (específico, mayor prioridad)
-
-```bash
-cp -r agents-stack/skills/_template agents-stack/skills/fastapi
-vim agents-stack/skills/fastapi/SKILL.md
-```
-
-El frontmatter `name` debe ser `<framework>-patterns` o `<lenguaje>-patterns`.
-
-Luego re-ejecuta el instalador:
+To change a model, edit `agents-stack/models.json` and re-run the installer:
 
 ```bash
 ./agents-stack/install.sh
 ```
 
-## Estructura del proyecto
+Claude Code users don't need additional configuration — models are injected
+from `models.json` during installation.
+
+## Usage
+
+### Full Pipeline
+
+```bash
+# 1. Plan an idea interactively
+opencode run "/planner Add OAuth authentication to the API"
+
+# 2. Decompose plan into atomic tasks
+opencode run "/tasks"
+
+# 3. Implement tasks one by one
+opencode run "/implement 1"
+opencode run "/implement 2"
+
+# 4. Validate an implementation against the plan
+opencode run "/validate 1"
+
+# 5. (Optional) Fix minor validation issues
+opencode run "/fix 1"
+
+# 6. Run tests, commit, and create PR
+opencode run "/pr-ready"
+```
+
+### Utility Commands
+
+| Command | Description |
+|---------|-------------|
+| `/context` | Generate project context docs (read by planner automatically) |
+| `/readme` | Generate a professional README.md |
+| `/reference --repo <url>` | Import external repository structure reference |
+
+## Subagents
+
+| Agent | Role | Model |
+|-------|------|-------|
+| **@planner** | Interactive requirements analyst — asks clarifying questions, produces `plan.md` | DeepSeek V4 Pro / Sonnet |
+| **@task-splitter** | Decomposes plan into atomic, ordered, testable tasks in `tasks.md` | DeepSeek V4 Flash / Haiku |
+| **@implementer** | Detects project stack, loads matching skill, implements with clean architecture + tests | MiniMax M2.7 / Sonnet |
+| **@validator** | Read-only quality check — validates against plan, runs tests, classifies issues (minor/major) | DeepSeek V4 Flash / Haiku |
+| **@fixer** | Surgical fixes for minor validation issues only (major issues go back to planner) | DeepSeek V4 Flash / Haiku |
+| **@pr-creator** | Runs tests, creates conventional commit, verifies conflicts, creates PR | DeepSeek V4 Flash / Haiku |
+| **@context-generator** | Generates structured business/domain docs in `docs/context/` | DeepSeek V4 Flash / Haiku |
+| **@readme-generator** | Generates professional README.md with auto-detected stack | DeepSeek V4 Flash / Haiku |
+| **@reference-extractor** | Imports external repo structure via GitHub API | DeepSeek V4 Flash / Haiku |
+
+## Add Language/Framework Skills
+
+Skills provide language-specific conventions for the implementer.
+They are loaded on demand when the matching stack is detected.
+
+The naming convention is:
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Frontmatter `name` | `<lang>-patterns` | `go-patterns` |
+| Directory name | `<lang>` | `go/` |
+| File name | `SKILL.md` | `skills/go/SKILL.md` |
+
+```bash
+# Copy the template
+cp -r agents-stack/skills/_template agents-stack/skills/go
+
+# Edit the skill
+vim agents-stack/skills/go/SKILL.md
+
+# Re-run the installer
+./agents-stack/install.sh
+```
+
+Framework skills load on top of language base skills:
 
 ```
-tu-proyecto/
+python-patterns          ← base language
+  └── django-patterns    ← framework layer
+  └── fastapi-patterns   ← framework layer
+```
+
+Run tests after changes:
+
+```bash
+./agents-stack/tests/run.sh
+```
+
+## Project Structure
+
+```
+your-project/
 ├── .opencode/
-│   ├── agents/           → symlinks a agents-stack/agents/
-│   ├── commands/         → symlinks a agents-stack/commands/
-│   └── skills/           → symlinks a skills instalados (python/, fastapi/)
+│   ├── agents/           → symlinks to agents-stack/agents/
+│   ├── commands/         → symlinks to agents-stack/commands/
+│   └── skills/           → symlinks to installed skills
 ├── .claude/
-│   ├── agents/           → copias con modelo inyectado
+│   ├── agents/           → copies with model injected
 │   ├── commands/         → symlinks
 │   └── skills/           → symlinks
 ├── agents-stack/
-│   ├── models.json       ← fuente única de modelos
-│   ├── agents/           → definiciones de subagentes
-│   ├── commands/         → definiciones de comandos slash
-│   ├── skills/           → python/, fastapi/, _template/
+│   ├── models.json       ← single source of truth for models
+│   ├── agents/           → subagent definitions (9 agents)
+│   ├── commands/         → slash command definitions (10 commands)
+│   ├── skills/           → python/, typescript/, react/, django/, fastapi/, textual/, _template/
+│   ├── tests/            → integration tests
 │   ├── install.sh
-│   └── install.ps1
-├── opencode.json         ← generado por el instalador
-├── AGENTS.md             → documentación del pipeline
-├── plan.md               → generado por /planner
-└── tasks.md              → generado por /tasks
+│   ├── install.ps1
+│   ├── AGENTS.md
+│   └── README.md
+├── opencode.json         ← auto-generated by installer
+├── AGENTS.md             ← pipeline documentation
+├── plan.md               ← generated by /planner
+└── tasks.md              ← generated by /tasks
 ```
+
+## License
+
+MIT
