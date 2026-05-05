@@ -304,7 +304,7 @@ models = json.loads(models_path.read_text())
 opencode_models = models.get("opencode", {})
 agent = {}
 
-for name in ("planner", "task-splitter", "implementer", "pr-creator"):
+for name in ("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator"):
     model = opencode_models.get(name, "")
     if model:
         agent[name] = {"model": model, "mode": "subagent"}
@@ -364,7 +364,7 @@ echo ""
 case "$TARGET" in
   opencode)
     info "Installing opencode assets..."
-    for agent in planner task-splitter implementer pr-creator; do
+    for agent in planner task-splitter implementer validator fixer pr-creator; do
       install_opencode_agent "$agent"
     done
     echo ""
@@ -373,13 +373,13 @@ case "$TARGET" in
     ;;
   claude)
     info "Installing Claude Code assets..."
-    for agent in planner task-splitter implementer pr-creator; do
+    for agent in planner task-splitter implementer validator fixer pr-creator; do
       install_claude_agent "$agent"
     done
     ;;
   both)
     info "Installing opencode assets..."
-    for agent in planner task-splitter implementer pr-creator; do
+    for agent in planner task-splitter implementer validator fixer pr-creator; do
       install_opencode_agent "$agent"
     done
     echo ""
@@ -387,7 +387,7 @@ case "$TARGET" in
     merge_opencode_config
     echo ""
     info "Installing Claude Code assets..."
-    for agent in planner task-splitter implementer pr-creator; do
+    for agent in planner task-splitter implementer validator fixer pr-creator; do
       install_claude_agent "$agent"
     done
     ;;
@@ -401,7 +401,7 @@ case "$TARGET" in
   claude) command_targets=(claude) ;;
   both) command_targets=(opencode claude) ;;
 esac
-for cmd in planner tasks implement pr-ready plan-extend; do
+for cmd in planner tasks implement validate fix pr-ready plan-extend; do
   for runtime_target in "${command_targets[@]}"; do
     install_commands_for_target "$runtime_target" "$cmd"
   done

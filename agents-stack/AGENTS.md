@@ -9,8 +9,8 @@ commands below.
 ## Pipeline Overview
 
 ```bash
-/planner    →  /tasks    →  /implement  →  /pr-ready
-(plan)         (split)       (build)        (ship)
+/planner    →  /tasks    →  /implement  →  /validate  →  /fix(optional)  →  /pr-ready
+(plan)         (split)       (build)        (verify)       (repair)           (ship)
 ```
 
 | Stage | Command | Subagent | What it does |
@@ -18,7 +18,9 @@ commands below.
 | 1 | `/planner "description"` | @planner | Clarifies requirements interactively, produces `plan.md` |
 | 2 | `/tasks` | @task-splitter | Reads `plan.md`, decomposes into atomic tasks in `tasks.md` |
 | 3 | `/implement <task-id>` | @implementer | Implements one task with clean architecture + unit tests |
-| 4 | `/pr-ready` | @pr-creator | Runs tests, creates commit + PR with results report |
+| 4 | `/validate <task-id>` | @validator | Validates implementation against plan, runs tests, classifies issues (minor/major) |
+| 5 | `/fix <task-id>` | @fixer | Applies surgical fixes for minor validation issues (major issues go back to `/planner`) |
+| 6 | `/pr-ready` | @pr-creator | Runs tests, creates commit + PR with results report |
 
 ## Setup
 
@@ -51,6 +53,8 @@ Add the `agent` section to your `opencode.json`:
     "planner":       { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },
     "task-splitter": { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },
     "implementer":   { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },
+    "validator":     { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },
+    "fixer":         { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },
     "pr-creator":    { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" }
   }
 }
@@ -73,12 +77,16 @@ After adding a skill, re-run `agents-stack/install.sh`.
 opencode run "/planner Add a dark mode toggle to settings"
 opencode run "/tasks"
 opencode run "/implement 1"
+opencode run "/validate 1"
+opencode run "/fix 1"
 opencode run "/pr-ready"
 
 # Claude Code
 claude -p "/planner Add user authentication with OAuth"
 claude -p "/tasks"
 claude -p "/implement 3"
+claude -p "/validate 3"
+claude -p "/fix 3"
 claude -p "/pr-ready"
 ```
 

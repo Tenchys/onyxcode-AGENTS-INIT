@@ -3,12 +3,16 @@
     "planner":       "opencode-go/deepseek-v4-pro",
     "task-splitter": "opencode-go/deepseek-v4-flash",
     "implementer":   "opencode-go/minimax-m2.7",
+    "validator":     "opencode-go/deepseek-v4-flash",
+    "fixer":         "opencode-go/deepseek-v4-flash",
     "pr-creator":    "opencode-go/deepseek-v4-flash"
   },
   "claude": {
     "planner":       "sonnet",
     "task-splitter": "haiku",
     "implementer":   "sonnet",
+    "validator":     "haiku",
+    "fixer":         "haiku",
     "pr-creator":    "haiku"
   }
 }

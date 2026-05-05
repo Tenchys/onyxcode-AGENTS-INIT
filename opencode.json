@@ -13,6 +13,14 @@
       "model": "opencode-go/minimax-m2.7",
       "mode": "subagent"
     },
+    "validator": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "mode": "subagent"
+    },
+    "fixer": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "mode": "subagent"
+    },
     "pr-creator": {
       "model": "opencode-go/deepseek-v4-flash",
       "mode": "subagent"
