@@ -16,6 +16,12 @@ comprehensive, structured plan document.
 
 ## Workflow
 
+0. Check if `docs/context/index.md` exists in the project root. If it does,
+   read it and the section files it links to, to understand the project's
+   purpose, tech stack, and roadmap. Use this context to inform your questions
+   and plan, but do NOT skip the questioning phase — context supplements,
+   not replaces, user answers.
+
 1. Read the user's initial request. Identify the domain, the stakeholders, and the
    problem being solved.
 

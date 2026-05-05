@@ -6,7 +6,8 @@
     "validator":     "opencode-go/deepseek-v4-flash",
     "fixer":         "opencode-go/deepseek-v4-flash",
     "pr-creator":    "opencode-go/deepseek-v4-flash",
-    "readme-generator": "opencode-go/deepseek-v4-flash"
+    "readme-generator": "opencode-go/deepseek-v4-flash",
+    "context-generator": "opencode-go/deepseek-v4-flash"
   },
   "claude": {
     "planner":       "sonnet",
@@ -15,6 +16,7 @@
     "validator":     "haiku",
     "fixer":         "haiku",
     "pr-creator":    "haiku",
-    "readme-generator": "haiku"
+    "readme-generator": "haiku",
+    "context-generator": "haiku"
   }
 }
