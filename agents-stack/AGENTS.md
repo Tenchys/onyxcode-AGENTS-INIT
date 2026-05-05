@@ -61,6 +61,18 @@ docs/context/  ──read by──→  @planner (if exists)
                             /planner → /tasks → /implement → ...
 ```
 
+### `/reference` — Repository Reference Importer
+
+Imports an external repository reference into `docs/references/`. Fetches the
+repo structure via GitHub/GitLab API and saves it as a single `.md` file with
+the URL + filtered project tree — so AI agents can understand a dependency
+without browsing the full repo.
+
+```bash
+# Import a GitHub repo reference
+opencode run "/reference --repo https://github.com/user/repo"
+```
+
 ### `/readme` — README Generator
 
 Generates a professional `README.md` with auto-detected stack, prerequisites,
