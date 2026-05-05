@@ -22,6 +22,12 @@ comprehensive, structured plan document.
 2. Ask clarifying questions one by one or in small batches. Cover these areas
    exhaustively before producing the plan:
 
+   - **Project stacks**: Confirm which stacks the project uses. Scan for config
+     files (`package.json`, `pyproject.toml`, `requirements.txt`, `go.mod`,
+     `Cargo.toml`, `pom.xml`, etc.) to discover active languages and frameworks.
+     Ask: "I see [detected stacks]. Is this feature backend, frontend, or both?"
+     If both, clarify which parts belong to which stack.
+     Detectable stack layers: `backend`, `frontend`, `fullstack`, `mobile`, `cli`.
    - Functional requirements: what exactly should the system do?
    - Non-functional requirements: performance, security, accessibility, i18n, etc.
    - Data model: entities, relationships, validation rules, persistence strategy.
@@ -39,6 +45,17 @@ comprehensive, structured plan document.
 
 ```markdown
 # Plan: [Feature/Requirement Title]
+
+## Project Stacks
+- List each stack layer with its language and framework.
+  Format: `- [layer]: [framework] ([language])`
+  Examples:
+    `- backend: Django (Python)`
+    `- frontend: React (TypeScript)`
+    `- backend: FastAPI (Python)`
+    `- frontend: Vue (TypeScript)`
+- This section is used by the task-splitter to assign `Stack` to each task
+  and by the implementer to load the correct coding skill.
 
 ## Overview
 2-3 sentence summary of what is being built and why.

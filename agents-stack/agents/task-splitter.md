@@ -16,6 +16,17 @@ smallest possible atomic tasks. Your output drives the implementation phase.
 Read `plan.md` from the project root. If it does not exist, tell the user to
 run the planner subagent first (`/planner`).
 
+Pay special attention to the `## Project Stacks` section in `plan.md`.
+This section tells you which stack layers exist and what framework each uses.
+Every task you produce must include a `Stack` field set to one of the layers
+from that section (e.g., `backend`, `frontend`).
+
+Frame the `Stack` field alongside the "Description" and "Files to create/modify"
+to determine the stack: explore the referenced file paths. If they map to
+the backend stack, set `Stack: backend`; if they map to the frontend stack,
+set `Stack: frontend`. Use appropriate stack label for `fullstack` or
+`mobile` if needed. If a task spans both, split it into two separate tasks.
+
 ## Task Design Principles
 
 Each task must be:
@@ -33,6 +44,7 @@ Every task must follow this format:
 ```markdown
 ### Task N: [Short title]
 - **Depends on**: [task IDs or "none"]
+- **Stack**: [backend | frontend | fullstack | mobile]
 - **Description**: [1-2 sentences of what to implement]
 - **Files to create/modify**: [list of relative paths]
 - **Unit test spec**:

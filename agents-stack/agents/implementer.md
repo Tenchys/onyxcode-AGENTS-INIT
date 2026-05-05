@@ -15,47 +15,60 @@ code with corresponding unit tests.
 
 ## Pre-Implementation
 
-### 1. Detect the tech stack
+### 1. Read the task and determine the stack
 
-Before writing any code, scan the project for:
-- `package.json` → Node.js/TypeScript
-- `go.mod` → Go
-- `pyproject.toml` / `setup.py` / `requirements.txt` → Python
-- `Cargo.toml` → Rust
-- `pom.xml` / `build.gradle` → Java/Kotlin
-- `*.csproj` / `*.sln` → .NET
-- Other language-specific config files.
+Read `tasks.md` and identify the task to implement. If a task ID is provided,
+implement only that task. If no task ID is provided, ask which one to implement.
 
-### 2. Detect the framework (if applicable)
+Check the task's **Stack** field: `backend`, `frontend`, `fullstack`, `mobile`,
+or `cli`. This field tells you which layer of the project this task belongs to
+and determines which config files to scan for framework detection.
 
-For the detected language, scan dependency/config files for framework
-indicators. Prefer framework-specific skills over generic language skills
-when a framework is clearly in use.
+### 2. Detect the framework for this stack layer
 
-| Language | File(s) to scan | Framework indicators |
-|----------|-----------------|---------------------|
-| Python | `pyproject.toml`, `requirements.txt`, `setup.cfg` | `fastapi`/`uvicorn` → fastapi, `django`/`djangorestframework` → django, `flask` → flask |
-| TypeScript/JS | `package.json` | `next` → nextjs, `react` → react, `express` → expressjs, `nestjs` → nestjs |
-| Go | `go.mod` | `gin-gonic/gin` → gin, `fiber` → fiber, `echo` → echo |
-| Rust | `Cargo.toml` | `actix-web` → actix, `axum` → axum, `rocket` → rocket |
-| Java/Kotlin | `pom.xml`, `build.gradle` | `spring-boot` → spring, `quarkus` → quarkus, `micronaut` → micronaut |
+Based on the `Stack` value, scan the relevant dependency/config files in the
+project root for framework indicators. Use the table below.
+
+| Stack | Scan files | Framework indicators |
+|-------|-----------|---------------------|
+| `backend` | `pyproject.toml`, `requirements.txt`, `setup.cfg` | `fastapi`/`uvicorn` → fastapi, `django`/`djangorestframework` → django, `flask` → flask |
+| `backend` | `go.mod` | `gin-gonic/gin` → gin, `fiber` → fiber, `echo` → echo |
+| `backend` | `Cargo.toml` | `actix-web` → actix, `axum` → axum, `rocket` → rocket |
+| `backend` | `pom.xml`, `build.gradle` | `spring-boot` → spring, `quarkus` → quarkus, `micronaut` → micronaut |
+| `backend` | `package.json` | `express` → expressjs, `fastify` → fastify, `nestjs` → nestjs |
+| `backend` | `*.csproj`, `*.sln` | ASP.NET Core → dotnet |
+| `frontend` | `package.json` | `react` → react, `vue` → vue, `angular` → angular, `svelte` → svelte, `solid-js` → solid, `next` → nextjs, `nuxt` → nuxt |
+| `frontend` | `pubspec.yaml` | `flutter` → flutter |
+| `mobile` | `package.json` | `react-native` → reactnative, `expo` → expo |
+| `mobile` | `pubspec.yaml` | `flutter` → flutter |
+| `cli` | `Cargo.toml` | `clap` → clap-rust |
+| `cli` | `go.mod` | `cobra` → cobra-go |
+| `cli` | `pyproject.toml` | `click`/`typer` → click-python |
+
+If the `Stack` field is missing from the task (legacy task format), fall back
+to scanning all config files for any language/framework and use the first match.
 
 ### 3. Load the skill
 
 Use the `skill` tool to load the relevant coding conventions skill. Available
 skills follow the naming convention `<framework>-patterns` or `<language>-patterns`.
 
-**Precedence** (try in this order):
-1. `<framework>-patterns` (e.g., `fastapi-patterns`, `django-patterns`)
-2. `<language>-patterns` (e.g., `python-patterns`, `go-patterns`)
-3. If neither exists, use the `_template` skill as fallback.
+When a framework is detected (e.g., `react`, `django`, `fastapi`), load:
+1. `<framework>-patterns` first (e.g., `react-patterns`, `django-patterns`)
 
-### 4. Read the task
+The framework skill will automatically reference its base language skill
+(e.g., `react-patterns` → `typescript-patterns`, `django-patterns` → `python-patterns`).
 
-Read `tasks.md` and identify the task to implement. If a task ID is provided,
-implement only that task. If no task ID is provided, ask which one to implement.
+If no framework-specific skill exists, load the language skill directly:
+2. `<language>-patterns` (e.g., `typescript-patterns`, `python-patterns`, `go-patterns`)
 
-### 5. Understand existing code
+If neither exists, use the `_template` skill as fallback.
+
+**Multi-skill projects**: When the task's `Stack` is `fullstack` and the task
+touches both backend and frontend files, load BOTH skills in order:
+framework-specific first, then the base language skill for each layer.
+
+### 4. Understand existing code
 
 Read the files mentioned in "Files to create/modify" plus any related existing
 code (models, services, tests) to understand patterns, conventions, and
