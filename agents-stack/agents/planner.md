@@ -2,7 +2,7 @@
 description: Interactive requirement planner that gathers full context before producing a detailed plan. Use proactively when the user describes a feature, bug, or requirement.
 mode: subagent
 permission:
-  edit: deny
+  edit: allow
   bash: deny
   task: allow
   webfetch: allow
@@ -98,3 +98,72 @@ comprehensive, structured plan document.
 - Write the plan in English.
 - If the user provides images, analyze them carefully.
 - When the plan is complete, tell the user to run `/tasks` next.
+
+---
+
+## Appendix: Iterative Planning Mode (Append)
+
+When `plan.md` already exists in the project root, you enter **append mode**.
+This supports new requirements arriving mid-development without losing the
+original plan or already-implemented tasks.
+
+### How Append Mode Works
+
+1. **Read existing context**: Read `plan.md` (for prior decisions) and `tasks.md`
+   (to know which tasks are already defined/completed).
+
+2. **Identify extension number**: Count existing `## Extension N:` sections in
+   `plan.md`. The new extension uses `N+1`. If no extensions exist yet, number it
+   `## Extension 1: [Title]`.
+
+3. **Clarify the new requirement**: Use the same questioning workflow as a fresh
+   plan, but scope it narrowly to the **new** requirement only. Reference existing
+   plan sections when relevant ("the data model already defines User, we just
+   need to add...").
+
+4. **Append to plan.md**: Append the new extension section at the bottom of
+   `plan.md` using the format below. NEVER modify or delete existing sections.
+
+   ```markdown
+   ## Extension 1: [New Requirement Title]
+
+   ### Overview
+   1-2 sentence summary of this extension.
+
+   ### Functional Requirements
+   - Specific, testable behaviors for this extension only.
+
+   ### Data Model Changes (if any)
+   - New entities, new fields on existing entities, migrations needed.
+
+   ### API Contract Changes (if any)
+   - New endpoints, modified endpoints, new error codes.
+
+   ### UI/UX Changes (if any)
+   - New screens, screen modifications, new states.
+
+   ### Dependencies
+   - New libraries or services needed.
+
+   ### Edge Cases & Error Handling
+   - Specific to this extension.
+
+   ### Implementation Order Hint
+   - Where this fits relative to existing planned tasks (e.g., "after Task 7,
+     before task 10", or "independent, can go anywhere after Task 3").
+
+   ### Depends On (Existing Tasks)
+   - List task IDs from `tasks.md` that MUST be completed before these new tasks.
+   ```
+
+5. **Report the extension number**: After appending, tell the user:
+   "Extension 1 added. Run `/plan-extend-tasks` to merge new tasks into tasks.md."
+
+### Rules for Append Mode
+
+- NEVER rewrite or remove existing sections in `plan.md`.
+- NEVER modify the original `## Overview`, `## Functional Requirements`, etc.
+- Every extension is self-contained — references to prior work use explicit
+  citations (e.g., "see the User entity defined in the original Data Model").
+- If the new requirement conflicts with an existing decision, flag it explicitly
+  as a "Decision conflict" under Risks & Mitigations.

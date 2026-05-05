@@ -43,7 +43,7 @@ project root for framework indicators. Use the table below.
 | `mobile` | `pubspec.yaml` | `flutter` → flutter |
 | `cli` | `Cargo.toml` | `clap` → clap-rust |
 | `cli` | `go.mod` | `cobra` → cobra-go |
-| `cli` | `pyproject.toml` | `click`/`typer` → click-python |
+| `cli` | `pyproject.toml` | `click`/`typer` → click-python, `textual` → textual-patterns |
 
 If the `Stack` field is missing from the task (legacy task format), fall back
 to scanning all config files for any language/framework and use the first match.

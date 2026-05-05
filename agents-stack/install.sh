@@ -401,7 +401,7 @@ case "$TARGET" in
   claude) command_targets=(claude) ;;
   both) command_targets=(opencode claude) ;;
 esac
-for cmd in planner tasks implement pr-ready; do
+for cmd in planner tasks implement pr-ready plan-extend; do
   for runtime_target in "${command_targets[@]}"; do
     install_commands_for_target "$runtime_target" "$cmd"
   done
