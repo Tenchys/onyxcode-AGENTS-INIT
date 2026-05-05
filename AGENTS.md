@@ -17,7 +17,7 @@ commands below.
 |-------|---------|----------|--------------|
 | 1 | `/planner "description"` | @planner | Clarifies requirements interactively, produces `plan.md` |
 | 2 | `/tasks` | @task-splitter | Reads `plan.md`, decomposes into atomic tasks in `tasks.md` |
-| 3 | `/implement <task-id>` | @implementer | Implements one task with clean architecture + unit tests. Auto-detects language and framework, loads matching skill |
+| 3 | `/implement <task-id>` | @implementer | Implements one task with clean architecture + unit tests |
 | 4 | `/pr-ready` | @pr-creator | Runs tests, creates commit + PR with results report |
 
 ## Setup
@@ -42,32 +42,29 @@ This creates the necessary symlinks/copies in `.opencode/` and `.claude/`.
 
 ### 2. Configure models (opencode only)
 
-The installer reads `models.json` and generates `opencode.json` automatically.
-To change models, edit `agents-stack/models.json` and re-run the installer:
+Add the `agent` section to your `opencode.json`:
 
-```bash
-cd agents-stack && ./install.sh --target opencode
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "planner":       { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },
+    "task-splitter": { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },
+    "implementer":   { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },
+    "pr-creator":    { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" }
+  }
+}
 ```
 
 Claude Code users don't need this — models are injected by `agents-stack/install.sh`.
 
-### 3. (Optional) Add skills
+### 3. (Optional) Add language-specific skills
 
-Skills provide language/framework-specific coding conventions. The implementer
-loads them with this precedence:
+Copy `agents-stack/skills/_template/` to `agents-stack/skills/<language>/` and customize
+`SKILL.md`. The implementer will auto-detect the project stack and load the
+matching skill.
 
-1. `<framework>-patterns` (e.g., `fastapi-patterns`, `django-patterns`)
-2. `<language>-patterns` (e.g., `python-patterns`, `go-patterns`)
-3. Fall back to `_template`
-
-To add a new language or framework skill, copy the template and customize:
-
-```bash
-cp -r agents-stack/skills/_template agents-stack/skills/<name>
-```
-
-Then set `name` in `SKILL.md` to `<framework>-patterns` or `<language>-patterns`
-and re-run `agents-stack/install.sh`.
+After adding a skill, re-run `agents-stack/install.sh`.
 
 ## Usage Examples
 
