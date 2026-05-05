@@ -16,67 +16,64 @@ con **opencode** y **Claude Code**.
 
 ## Instalación
 
-### 1. Copiá los archivos a tu proyecto
+Copia el directorio `agents-stack/` a la raíz de tu proyecto y ejecuta el
+instalador:
 
 ```bash
 cp -r agents-stack/ /ruta/de/tu/proyecto/
-```
-
-### 2. Ejecutá el instalador
-
-```bash
 cd /ruta/de/tu/proyecto/agents-stack
-./install.sh --target opencode   # macOS / Linux
-# o
-./install.sh --target claude
-# o
-./install.sh --target both
-# o
-.\install.ps1 -Target opencode  # Windows PowerShell
-# o
-.\install.ps1 -Target claude
-# o
-.\install.ps1 -Target both
+./install.sh --target both   # opencode + Claude Code
+# o usa un target específico:
+#   ./install.sh --target opencode
+#   ./install.sh --target claude
+# Windows PowerShell:
+#   .\install.ps1 -Target both
 ```
 
 Esto crea:
 
 | Directorio | Contenido |
 |------------|-----------|
-| `.opencode/agents/` | Symlinks a los agentes (compatible con opencode) |
-| `.claude/agents/` | Copias de los agentes con modelo inyectado (compatible con Claude Code) |
+| `.opencode/agents/` | Symlinks a los agentes |
+| `.claude/agents/` | Copias con modelo inyectado |
 | `.opencode/commands/` | Comandos slash (`/planner`, `/tasks`, `/implement`, `/pr-ready`) |
-| `.claude/commands/` | Comandos slash (ídem) |
-| `.opencode/skills/` | Skills de lenguajes (symlinks) |
-| `.claude/skills/` | Skills de lenguajes (symlinks) |
-| `AGENTS.md` | Instrucciones del proyecto para opencode |
+| `.claude/commands/` | Comandos slash |
+| `.opencode/skills/` | Skills de lenguaje/framework (symlinks) |
+| `.claude/skills/` | Skills de lenguaje/framework (symlinks) |
+| `AGENTS.md` | Instrucciones del pipeline |
 
-### 3. Configurá los modelos
+## Configurar modelos
 
-#### opencode
+Los modelos se definen en `agents-stack/models.json`, la fuente única de
+verdad. El instalador lee este archivo y genera `opencode.json`
+automáticamente.
 
-El instalador agrega automáticamente la sección `agent` a tu `opencode.json`.
-Si el archivo no existe, lo crea.
-
-```jsonc
+```json
 {
-  "$schema": "https://opencode.ai/config.json",
-  "agent": {
-    "planner":       { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },
-    "task-splitter": { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },
-    "implementer":   { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },
-    "pr-creator":    { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" }
+  "opencode": {
+    "planner":       "opencode-go/deepseek-v4-pro",
+    "task-splitter": "opencode-go/deepseek-v4-flash",
+    "implementer":   "opencode-go/minimax-m2.7",
+    "pr-creator":    "opencode-go/deepseek-v4-flash"
+  },
+  "claude": {
+    "planner":       "sonnet",
+    "task-splitter": "haiku",
+    "implementer":   "sonnet",
+    "pr-creator":    "haiku"
   }
 }
 ```
 
-Ajustá los IDs de modelo según los que tengas configurados en tu provider.
+Para cambiar un modelo, edita `agents-stack/models.json` y vuelve a ejecutar
+el instalador:
 
-#### Claude Code
+```bash
+./agents-stack/install.sh --target both
+```
 
-No requiere configuración adicional. Los modelos ya se inyectan desde
-`agents-stack/models.json` durante la instalación. Si querés cambiar un modelo, editá
-ese archivo y volvé a ejecutar `./install.sh`.
+Para Claude Code no se requiere configuración adicional — los modelos se
+inyectan desde `models.json` durante la instalación.
 
 ## Uso
 
@@ -122,47 +119,41 @@ claude -p "/pr-ready"
 |--------|-------------|-----------------|
 | **planner** | Planifica requerimientos haciendo preguntas interactivas hasta cubrir todo el contexto. Genera `plan.md`. | Sonnet / Opus |
 | **task-splitter** | Lee `plan.md` y lo descompone en tareas atómicas con specs de tests unitarios y E2E. Genera `tasks.md`. | Haiku |
-| **implementer** | Detecta el stack, carga la skill del lenguaje, implementa con clean architecture y código comentado. | Sonnet / Opus |
+| **implementer** | Detecta el stack (lenguaje + framework), carga la skill correspondiente, implementa con clean architecture y código comentado. | Sonnet / Opus |
 | **pr-creator** | Corre tests, resume cambios, crea commit y PR, verifica conflictos con `main`. | Haiku |
 
-## Agregar skills de lenguajes
+## Agregar skills de lenguajes y frameworks
 
-El implementer carga automáticamente la skill correspondiente al stack del
-proyecto. Para agregar un nuevo lenguaje:
+El implementer detecta el lenguaje y framework del proyecto y carga la skill
+correspondiente con esta precedencia:
+
+1. `<framework>-patterns` (ej. `fastapi-patterns`, `django-patterns`)
+2. `<lenguaje>-patterns` (ej. `python-patterns`, `go-patterns`)
+3. Si ninguna existe, usa el `_template` como fallback
+
+El mapeo de dependencias a frameworks está definido en
+`agents-stack/agents/implementer.md`.
+
+### Skill de lenguaje (fallback genérico)
 
 ```bash
-# 1. Copiá el template
 cp -r agents-stack/skills/_template agents-stack/skills/python
-
-# 2. Editá el SKILL.md con las convenciones del lenguaje
 vim agents-stack/skills/python/SKILL.md
-
-# 3. Re-ejecutá el instalador
-./agents-stack/install.sh
 ```
 
-La skill debe llamarse `<lenguaje>-patterns` (ej. `python-patterns`,
-`go-patterns`) para que el implementer pueda encontrarla.
+### Skill de framework (específico, mayor prioridad)
 
-## Cambiar modelos
+```bash
+cp -r agents-stack/skills/_template agents-stack/skills/fastapi
+vim agents-stack/skills/fastapi/SKILL.md
+```
 
-Editá `agents-stack/models.json` y volvé a ejecutar `./agents-stack/install.sh`:
+El frontmatter `name` debe ser `<framework>-patterns` o `<lenguaje>-patterns`.
 
-```json
-{
-  "opencode": {
-    "planner":       "anthropic/claude-sonnet-4-20250514",
-    "task-splitter": "anthropic/claude-haiku-4-20250514",
-    "implementer":   "anthropic/claude-sonnet-4-20250514",
-    "pr-creator":    "anthropic/claude-haiku-4-20250514"
-  },
-  "claude": {
-    "planner":       "sonnet",
-    "task-splitter": "haiku",
-    "implementer":   "sonnet",
-    "pr-creator":    "haiku"
-  }
-}
+Luego re-ejecuta el instalador:
+
+```bash
+./agents-stack/install.sh
 ```
 
 ## Estructura del proyecto
@@ -172,18 +163,19 @@ tu-proyecto/
 ├── .opencode/
 │   ├── agents/           → symlinks a agents-stack/agents/
 │   ├── commands/         → symlinks a agents-stack/commands/
-│   └── skills/           → symlinks a agents-stack/skills/
+│   └── skills/           → symlinks a skills instalados (python/, fastapi/)
 ├── .claude/
 │   ├── agents/           → copias con modelo inyectado
-│   ├── commands/         → symlinks a agents-stack/commands/
-│   └── skills/           → symlinks a agents-stack/skills/
+│   ├── commands/         → symlinks
+│   └── skills/           → symlinks
 ├── agents-stack/
-│   ├── models.json       → configuración de modelos
-│   ├── agents/           → definiciones fuente de los subagentes
+│   ├── models.json       ← fuente única de modelos
+│   ├── agents/           → definiciones de subagentes
 │   ├── commands/         → definiciones de comandos slash
-│   ├── skills/           → skills de lenguajes
+│   ├── skills/           → python/, fastapi/, _template/
 │   ├── install.sh
 │   └── install.ps1
+├── opencode.json         ← generado por el instalador
 ├── AGENTS.md             → documentación del pipeline
 ├── plan.md               → generado por /planner
 └── tasks.md              → generado por /tasks

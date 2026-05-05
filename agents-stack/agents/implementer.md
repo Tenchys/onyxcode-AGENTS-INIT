@@ -26,19 +26,36 @@ Before writing any code, scan the project for:
 - `*.csproj` / `*.sln` → .NET
 - Other language-specific config files.
 
-### 2. Load the language skill
+### 2. Detect the framework (if applicable)
 
-Use the `skill` tool to load the corresponding skill for the detected language.
-Available skills follow the naming convention `<language>-patterns` (e.g.,
-`typescript-patterns`, `python-patterns`, `go-patterns`). If no exact match
-exists, load the closest one or use the `_template` skill as a fallback.
+For the detected language, scan dependency/config files for framework
+indicators. Prefer framework-specific skills over generic language skills
+when a framework is clearly in use.
 
-### 3. Read the task
+| Language | File(s) to scan | Framework indicators |
+|----------|-----------------|---------------------|
+| Python | `pyproject.toml`, `requirements.txt`, `setup.cfg` | `fastapi`/`uvicorn` → fastapi, `django`/`djangorestframework` → django, `flask` → flask |
+| TypeScript/JS | `package.json` | `next` → nextjs, `react` → react, `express` → expressjs, `nestjs` → nestjs |
+| Go | `go.mod` | `gin-gonic/gin` → gin, `fiber` → fiber, `echo` → echo |
+| Rust | `Cargo.toml` | `actix-web` → actix, `axum` → axum, `rocket` → rocket |
+| Java/Kotlin | `pom.xml`, `build.gradle` | `spring-boot` → spring, `quarkus` → quarkus, `micronaut` → micronaut |
+
+### 3. Load the skill
+
+Use the `skill` tool to load the relevant coding conventions skill. Available
+skills follow the naming convention `<framework>-patterns` or `<language>-patterns`.
+
+**Precedence** (try in this order):
+1. `<framework>-patterns` (e.g., `fastapi-patterns`, `django-patterns`)
+2. `<language>-patterns` (e.g., `python-patterns`, `go-patterns`)
+3. If neither exists, use the `_template` skill as fallback.
+
+### 4. Read the task
 
 Read `tasks.md` and identify the task to implement. If a task ID is provided,
 implement only that task. If no task ID is provided, ask which one to implement.
 
-### 4. Understand existing code
+### 5. Understand existing code
 
 Read the files mentioned in "Files to create/modify" plus any related existing
 code (models, services, tests) to understand patterns, conventions, and
