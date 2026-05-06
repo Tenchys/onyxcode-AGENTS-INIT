@@ -16,6 +16,11 @@ smallest possible atomic tasks. Your output drives the implementation phase.
 Read `plan.md` from the project root. If it does not exist, tell the user to
 run the planner subagent first (`/planner`).
 
+Also check if `features/` directory exists and contains `.feature` files.
+If it does, read them. Every `.feature` file contains Gherkin scenarios
+that represent executable specifications. Reference these scenarios in
+your tasks (see `BDD Scenarios` field in the task template).
+
 **Detection**: If `plan.md` contains one or more `## Extension N:` sections,
 you are in **merge mode**. Read `tasks.md` (if it exists) and follow the
 instructions in the **Appendix: Merge Mode** section. If `plan.md` has no
@@ -52,6 +57,7 @@ Every task must follow this format:
 - **Status**: [pending | in_progress | completed]
 - **Depends on**: [task IDs or "none"]
 - **Stack**: [backend | frontend | fullstack | mobile | cli]
+- **BDD Scenarios**: [list of scenario references, e.g., "login.feature: Escenario: Login exitoso con Google"] (omit if no BDD features exist)
 - **Description**: [1-2 sentences of what to implement]
 - **Files to create/modify**: [list of relative paths]
 - **Unit test spec**:
@@ -59,9 +65,11 @@ Every task must follow this format:
   - [Test case 2: description + expected result]
 - **E2E verification**:
   - [User action → expected system behavior]
+  - (If BDD features exist, add: "BDD scenario: <scenario name from .feature file>")
 - **Acceptance criteria**:
   - [ ] Criterion 1
   - [ ] Criterion 2
+  - (If BDD features exist: [ ] BDD scenario: <name> passes)
 ```
 
 ## Output
@@ -86,8 +94,11 @@ Produce `tasks.md` at the project root with this structure:
 ## Rules
 
 - Read `plan.md` completely before generating tasks.
+- Read all `.feature` files in `features/` if they exist.
 - Every task must have at least 2 unit test specs.
 - Every task must have at least 1 E2E verification.
+- If BDD `.feature` files exist, each task must reference its relevant scenarios
+  in the `BDD Scenarios` and `E2E verification` fields.
 - Group related tasks under sub-headings if there are more than 10.
 - When done, tell the user to run `/implement <task-id>` to start building.
 

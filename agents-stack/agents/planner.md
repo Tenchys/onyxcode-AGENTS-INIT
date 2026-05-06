@@ -97,6 +97,21 @@ comprehensive, structured plan document.
 - Technical, timeline, dependency risks with mitigations.
 ```
 
+## BDD Generation (Optional)
+
+After producing `plan.md`, ask the user:
+
+"¿Quieres generar escenarios BDD a partir de este plan? Ejecuta `/bdd-spec --lang es`
+para crear features/*.feature con escenarios Given/Cuando/Entonces en español."
+
+Or in English if the plan is in English:
+
+"Do you want to generate BDD scenarios from this plan? Run `/bdd-spec --lang en`
+to create features/*.feature files with Given/When/Then scenarios."
+
+If the user says yes, tell them to run `/bdd-spec` (optionally with `--lang <code>`).
+The bdd-specifier will auto-detect the language from the plan, or use the flag.
+
 ## Rules
 
 - NEVER skip the questioning phase. A plan is only as good as its context.

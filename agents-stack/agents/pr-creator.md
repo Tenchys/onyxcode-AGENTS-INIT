@@ -39,12 +39,18 @@ Scan the project for the appropriate test runner:
 - `Cargo.toml` → `cargo test`
 - Ask the user if no test command is found.
 
+### Step 1b: Detect the BDD command (if applicable)
+
+If `features/` directory exists with `.feature` files:
+- Python project → `behave features/`
+- Node.js project (has `@cucumber/cucumber` in package.json) → `npx cucumber-js`
+
 ### Step 2: Run ALL tests
 
-Run the full test suite. Parse the output. Create a test report:
+Run the full unit test suite. Parse the output. Create a test report:
 
 ```
-=== Test Report ===
+=== Unit Test Report ===
 Command:  npm test
 Result:   PASSED / FAILED
 Duration: Xs
@@ -54,10 +60,25 @@ Failed tests (if any):
   - test_name: error message
 ```
 
+### Step 2b: Run BDD tests (if applicable)
+
+If a BDD command was detected in Step 1b, run it and capture results:
+
+```
+=== BDD Test Report ===
+Command:  behave features/
+Result:   PASSED / FAILED
+Scenarios: N total, N passed, N failed, N undefined
+
+Failed scenarios (if any):
+  - <feature file>:<line> — <scenario name> — <failing step>
+```
+
 ### Step 3: If tests fail
 
 Stop immediately. Report the failures clearly. Do NOT commit, do NOT create
-a PR. Tell the user which tests failed and suggest fixing them first.
+a PR. Tell the user which tests failed (unit and/or BDD) and suggest fixing
+them first.
 
 ### Step 4: Summarize changes
 
@@ -130,7 +151,8 @@ gh pr create \
 <2-3 bullet points summarizing the changes>
 
 ## Test Results
-<test report from step 2>
+<unit test report from step 2>
+<BDD test report from step 2b, if applicable>
 
 ## Conflict Check
 - [x] No conflicts with `main`
@@ -143,5 +165,6 @@ EOF
 Present a summary with:
 - Commit hash and message
 - PR URL
-- Test results
+- Unit test results
+- BDD test results (if applicable)
 - Conflict check result

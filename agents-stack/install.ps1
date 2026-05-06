@@ -153,7 +153,7 @@ function Merge-OpenCodeConfig {
     $dst = Join-Path $ProjectRoot "opencode.json"
     $agent = [ordered]@{}
 
-    foreach ($name in @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor")) {
+    foreach ($name in @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "bdd-specifier", "readme-generator", "context-generator", "reference-extractor")) {
         $model = Get-Model "opencode" $name
         if ($model) {
             $agent[$name] = [ordered]@{
@@ -229,7 +229,7 @@ switch ($Target) {
 switch ($Target) {
     "opencode" {
         Write-Host "[→] Installing opencode assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
+        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "bdd-specifier", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-OpenCodeAgent $_
         }
 
@@ -239,13 +239,13 @@ switch ($Target) {
     }
     "claude" {
         Write-Host "[→] Installing Claude Code assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
+        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "bdd-specifier", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-ClaudeAgent $_
         }
     }
     default {
         Write-Host "[→] Installing opencode assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
+        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "bdd-specifier", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-OpenCodeAgent $_
         }
 
@@ -255,7 +255,7 @@ switch ($Target) {
 
         Write-Host ""
         Write-Host "[→] Installing Claude Code assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
+        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "bdd-specifier", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-ClaudeAgent $_
         }
     }
@@ -264,7 +264,7 @@ switch ($Target) {
 # --- Commands ---
 Write-Host ""
 Write-Host "[→] Installing slash commands..." -ForegroundColor Cyan
-@("planner", "tasks", "implement", "validate", "fix", "pr-ready", "plan-extend", "readme", "context", "reference") | ForEach-Object {
+@("planner", "tasks", "implement", "validate", "fix", "pr-ready", "bdd-spec", "plan-extend", "readme", "context", "reference") | ForEach-Object {
     $cmd = $_
     $RuntimeTargets | ForEach-Object {
         Install-Commands $_ $cmd
@@ -288,6 +288,20 @@ if (Test-Path $skillDir) {
     }
 }
 
+# --- BDD language configuration ---
+Write-Host ""
+Write-Host "[→] Configuring BDD language..." -ForegroundColor Cyan
+$BDDLang = if ($args -contains "--bdd-lang") {
+    $idx = [array]::IndexOf($args, "--bdd-lang")
+    $args[$idx + 1]
+} else { "en" }
+
+$bddConfigDir = Join-Path $ProjectRoot "features"
+if (-not (Test-Path $bddConfigDir)) { New-Item -ItemType Directory -Path $bddConfigDir -Force | Out-Null }
+$bddConfig = @{ lang = $BDDLang; version = 1 } | ConvertTo-Json
+Set-Content -Path (Join-Path $bddConfigDir ".bddconfig") -Value $bddConfig
+Write-Host "[✓] BDD language: $BDDLang → features/.bddconfig" -ForegroundColor Green
+
 # --- Final instructions ---
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
@@ -300,4 +314,5 @@ switch ($Target) {
     "claude"   { Write-Host "Installed: .claude/" }
     default     { Write-Host "Installed: .opencode/, .claude/, opencode.json" }
 }
+Write-Host "BDD language: $BDDLang"
 Write-Host ""

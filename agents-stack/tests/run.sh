@@ -40,6 +40,7 @@ AGENTS=(
   validator
   fixer
   pr-creator
+  bdd-specifier
   readme-generator
   context-generator
   reference-extractor
@@ -52,6 +53,7 @@ COMMANDS=(
   validate
   fix
   pr-ready
+  bdd-spec
   plan-extend
   readme
   context
@@ -65,6 +67,7 @@ SKILLS=(
   django
   fastapi
   textual
+  bdd
 )
 
 AGENT_NAMES=(
@@ -74,6 +77,7 @@ AGENT_NAMES=(
   validator
   fixer
   pr-creator
+  bdd-specifier
   readme-generator
   context-generator
   reference-extractor

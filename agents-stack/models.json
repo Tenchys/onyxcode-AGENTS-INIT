@@ -6,6 +6,7 @@
     "validator":     "opencode-go/deepseek-v4-flash",
     "fixer":         "opencode-go/deepseek-v4-flash",
     "pr-creator":    "opencode-go/deepseek-v4-flash",
+    "bdd-specifier": "opencode-go/deepseek-v4-flash",
     "readme-generator": "opencode-go/deepseek-v4-flash",
     "context-generator": "opencode-go/deepseek-v4-flash",
     "reference-extractor": "opencode-go/deepseek-v4-flash"
@@ -17,6 +18,7 @@
     "validator":     "haiku",
     "fixer":         "haiku",
     "pr-creator":    "haiku",
+    "bdd-specifier": "haiku",
     "readme-generator": "haiku",
     "context-generator": "haiku",
     "reference-extractor": "haiku"

@@ -52,7 +52,17 @@ Read the test files associated with the task. Verify:
 - Tests cover the task description's core functionality
 - Edge cases from `plan.md` are covered where applicable
 
-### Step 5: Run tests
+### Step 4b: Check BDD scenarios
+
+If the task has a `BDD Scenarios` field or `features/` exists:
+1. Read the referenced `.feature` files
+2. Check that every Gherkin step has a corresponding step definition
+   (no "undefined step" errors when running the BDD runner)
+3. Verify that step definitions actually call production code
+   (not empty/placeholder implementations)
+4. Check BDD scenario names match the task's acceptance criteria
+
+### Step 5: Run unit tests
 
 Detect the test runner (same logic as pr-creator):
 - `package.json` → `npm test`
@@ -61,7 +71,18 @@ Detect the test runner (same logic as pr-creator):
 - `Cargo.toml` → `cargo test`
 - `Makefile` → look for `test` target
 
-Run the full test suite and capture the results.
+Run the full unit test suite and capture the results.
+
+### Step 5b: Run BDD tests (if present)
+
+If `features/` directory exists with `.feature` files:
+1. Detect the BDD runner:
+   - Python project → `behave features/`
+   - Node.js project (has `@cucumber/cucumber` in package.json) → `npx cucumber-js`
+2. Run the BDD runner and capture the results:
+   - Total scenarios, passed, failed, undefined steps
+   - List any failed/undefined scenarios
+3. If BDD runner is not found, skip this step and report "No BDD runner detected"
 
 ### Step 6: Validate against plan
 
@@ -103,12 +124,19 @@ Emit the report in this exact structure:
 - Test spec item 2: [covered / missing]
 - Additional tests: N — [good / insufficient]
 
-### Test Results
+### Unit Test Results
 Command: <test command>
 Result: PASSED / FAILED (<duration>)
 Tests: N total, N passed, N failed, N skipped
 
 <If failures: list each failed test with error>
+
+### BDD Results (if applicable)
+Command: <bdd command>
+Result: PASSED / FAILED
+Scenarios: N total, N passed, N failed, N undefined
+
+<If failures: list each failed scenario with the failing step>
 
 ### Plan Compliance
 - FR-<N>: [pass / fail] — <details>

@@ -14,6 +14,7 @@ INSTALL_AGENTS_FILE="$SRC_DIR/AGENTS.md"
 
 TARGET=""
 TARGET_EXPLICIT=0
+BDD_LANG="en"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -28,12 +29,14 @@ info() { echo -e "${CYAN}[→]${NC} $1"; }
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh [--target opencode|claude|both]
+Usage: ./install.sh [--target opencode|claude|both] [--bdd-lang <code>]
 
 Targets:
-  opencode   Install .opencode assets and merge opencode.json
-  claude     Install .claude assets only
-  both       Install both sets (default)
+  opencode      Install .opencode assets and merge opencode.json
+  claude        Install .claude assets only
+  both          Install both sets (default)
+  --bdd-lang    Default BDD language code (e.g., en, es, fr, de, pt).
+                Default: en. Can be changed later via /bdd-spec --lang
 EOF
 }
 
@@ -67,6 +70,11 @@ parse_args() {
         TARGET="both"
         TARGET_EXPLICIT=1
         shift
+        ;;
+      --bdd-lang)
+        [ $# -ge 2 ] || { err "Missing value for $1"; exit 1; }
+        BDD_LANG="$2"
+        shift 2
         ;;
       -h|--help)
         usage
@@ -304,7 +312,7 @@ models = json.loads(models_path.read_text())
 opencode_models = models.get("opencode", {})
 agent = {}
 
-for name in ("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "readme-generator", "context-generator", "reference-extractor"):
+for name in ("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "bdd-specifier", "readme-generator", "context-generator", "reference-extractor"):
     model = opencode_models.get(name, "")
     if model:
         agent[name] = {"model": model, "mode": "subagent"}
@@ -364,7 +372,7 @@ echo ""
 case "$TARGET" in
   opencode)
     info "Installing opencode assets..."
-    for agent in planner task-splitter implementer validator fixer pr-creator readme-generator context-generator reference-extractor; do
+    for agent in planner task-splitter implementer validator fixer pr-creator readme-generator context-generator reference-extractor bdd-specifier; do
       install_opencode_agent "$agent"
     done
     echo ""
@@ -373,13 +381,13 @@ case "$TARGET" in
     ;;
   claude)
     info "Installing Claude Code assets..."
-    for agent in planner task-splitter implementer validator fixer pr-creator readme-generator context-generator reference-extractor; do
+    for agent in planner task-splitter implementer validator fixer pr-creator readme-generator context-generator reference-extractor bdd-specifier; do
       install_claude_agent "$agent"
     done
     ;;
   both)
     info "Installing opencode assets..."
-    for agent in planner task-splitter implementer validator fixer pr-creator readme-generator context-generator reference-extractor; do
+    for agent in planner task-splitter implementer validator fixer pr-creator readme-generator context-generator reference-extractor bdd-specifier; do
       install_opencode_agent "$agent"
     done
     echo ""
@@ -387,7 +395,7 @@ case "$TARGET" in
     merge_opencode_config
     echo ""
     info "Installing Claude Code assets..."
-    for agent in planner task-splitter implementer validator fixer pr-creator readme-generator context-generator reference-extractor; do
+    for agent in planner task-splitter implementer validator fixer pr-creator readme-generator context-generator reference-extractor bdd-specifier; do
       install_claude_agent "$agent"
     done
     ;;
@@ -401,7 +409,7 @@ case "$TARGET" in
   claude) command_targets=(claude) ;;
   both) command_targets=(opencode claude) ;;
 esac
-for cmd in planner tasks implement validate fix pr-ready plan-extend readme context reference; do
+for cmd in planner tasks implement validate fix pr-ready plan-extend readme context reference bdd-spec; do
   for runtime_target in "${command_targets[@]}"; do
     install_commands_for_target "$runtime_target" "$cmd"
   done
@@ -424,6 +432,18 @@ for skill_dir in "$SRC_DIR"/skills/*/; do
   done
 done
 
+# --- BDD language configuration ---
+echo ""
+info "Configuring BDD language..."
+mkdir -p "$PROJECT_ROOT/features"
+if [ -t 0 ] && [ "$BDD_LANG" = "en" ] && ! echo "$*" | grep -q -- --bdd-lang; then
+  echo ""
+  read -p "BDD language code [en]: " user_lang
+  BDD_LANG="${user_lang:-en}"
+fi
+echo "{\"lang\": \"$BDD_LANG\", \"version\": 1}" > "$PROJECT_ROOT/features/.bddconfig"
+log "BDD language:   $BDD_LANG → features/.bddconfig"
+
 # --- Final instructions ---
 echo ""
 echo -e "${GREEN}========================================${NC}"
@@ -442,4 +462,5 @@ case "$TARGET" in
     echo "Installed: .opencode/, .claude/, opencode.json"
     ;;
 esac
+echo "BDD language: $BDD_LANG"
 echo ""

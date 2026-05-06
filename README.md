@@ -4,8 +4,8 @@ AI-assisted software development pipeline with 6 subagent stages.
 Compatible with **opencode** and **Claude Code**.
 
 ```
-/planner  →  /tasks  →  /implement  →  /validate  →  /fix(optional)  →  /pr-ready
-(plan)       (split)     (build)         (verify)       (repair)           (ship)
+/planner  →  [/bdd-spec (optional)]  →  /tasks  →  /implement  →  /validate  →  /fix(optional)  →  /pr-ready
+(plan)       (BDD scenarios)            (split)     (build)         (verify)       (repair)           (ship)
 ```
 
 ## Requirements
@@ -24,7 +24,8 @@ cd /path/to/your/project/agents-stack
 ./install.sh --target both
 # or:
 #   ./install.sh --target opencode
-#   ./install.sh --target claude
+#   ./install.sh --target claude --bdd-lang es    # BDD scenarios in Spanish
+#   ./install.sh --bdd-lang fr                    # BDD scenarios in French
 # Windows PowerShell:
 #   .\install.ps1 -Target both
 ```
@@ -35,10 +36,10 @@ This creates:
 |-----------|----------|
 | `.opencode/agents/` | Symlinks to agent definitions |
 | `.claude/agents/` | Copies with injected model config |
-| `.opencode/commands/` | Slash commands (`/planner`, `/tasks`, `/implement`, `/validate`, `/fix`, `/pr-ready`, `/context`, `/readme`, `/reference`) |
+| `.opencode/commands/` | Slash commands (`/planner`, `/bdd-spec`, `/tasks`, `/implement`, `/validate`, `/fix`, `/pr-ready`, `/context`, `/readme`, `/reference`) |
 | `.claude/commands/` | Slash commands (same set) |
-| `.opencode/skills/` | Language/framework skill symlinks |
-| `.claude/skills/` | Language/framework skill symlinks |
+| `.opencode/skills/` | Language/framework skill symlinks (includes `bdd-patterns` for BDD) |
+| `.claude/skills/` | Language/framework skill symlinks (includes `bdd-patterns` for BDD) |
 | `opencode.json` | Auto-generated model configuration |
 | `AGENTS.md` | Pipeline documentation |
 
@@ -56,6 +57,7 @@ The installer reads this file and generates `opencode.json` automatically.
     "validator":           "opencode-go/deepseek-v4-flash",
     "fixer":               "opencode-go/deepseek-v4-flash",
     "pr-creator":          "opencode-go/deepseek-v4-flash",
+    "bdd-specifier":       "opencode-go/deepseek-v4-flash",
     "readme-generator":    "opencode-go/deepseek-v4-flash",
     "context-generator":   "opencode-go/deepseek-v4-flash",
     "reference-extractor": "opencode-go/deepseek-v4-flash"
@@ -67,6 +69,7 @@ The installer reads this file and generates `opencode.json` automatically.
     "validator":     "haiku",
     "fixer":         "haiku",
     "pr-creator":    "haiku",
+    "bdd-specifier": "haiku",
     "readme-generator":    "haiku",
     "context-generator":   "haiku",
     "reference-extractor": "haiku"
@@ -91,20 +94,23 @@ from `models.json` during installation.
 # 1. Plan an idea interactively
 opencode run "/planner Add OAuth authentication to the API"
 
-# 2. Decompose plan into atomic tasks
+# 2. (Optional) Generate BDD scenarios from the plan
+opencode run "/bdd-spec --lang es"
+
+# 3. Decompose plan into atomic tasks
 opencode run "/tasks"
 
-# 3. Implement tasks one by one
+# 4. Implement tasks one by one
 opencode run "/implement 1"
 opencode run "/implement 2"
 
-# 4. Validate an implementation against the plan
+# 5. Validate an implementation against the plan
 opencode run "/validate 1"
 
-# 5. (Optional) Fix minor validation issues
+# 6. (Optional) Fix minor validation issues
 opencode run "/fix 1"
 
-# 6. Run tests, commit, and create PR
+# 7. Run tests, commit, and create PR
 opencode run "/pr-ready"
 ```
 
@@ -113,6 +119,7 @@ opencode run "/pr-ready"
 | Command | Description |
 |---------|-------------|
 | `/context` | Generate project context docs (read by planner automatically) |
+| `/bdd-spec [--lang <code>]` | Convert plan.md into Gherkin `.feature` files (BDD). Language auto-detected from plan or set via `--lang` (es, en, fr, de, pt, etc.) |
 | `/readme` | Generate a professional README.md |
 | `/reference --repo <url>` | Import external repository structure reference |
 
@@ -122,10 +129,11 @@ opencode run "/pr-ready"
 |-------|------|-------|
 | **@planner** | Interactive requirements analyst — asks clarifying questions, produces `plan.md` | DeepSeek V4 Pro / Sonnet |
 | **@task-splitter** | Decomposes plan into atomic, ordered, testable tasks in `tasks.md` | DeepSeek V4 Flash / Haiku |
-| **@implementer** | Detects project stack, loads matching skill, implements with clean architecture + tests | MiniMax M2.7 / Sonnet |
-| **@validator** | Read-only quality check — validates against plan, runs tests, classifies issues (minor/major) | DeepSeek V4 Flash / Haiku |
+| **@implementer** | Detects project stack, loads matching skill (incl. `bdd-patterns`), implements with clean architecture + tests + BDD step definitions | MiniMax M2.7 / Sonnet |
+| **@bdd-specifier** | Converts plan.md into Gherkin `.feature` files. Supports multilingual BDD (es, en, fr, de, pt, etc.) | DeepSeek V4 Flash / Haiku |
+| **@validator** | Read-only quality check — validates against plan, runs unit + BDD tests, classifies issues (minor/major) | DeepSeek V4 Flash / Haiku |
 | **@fixer** | Surgical fixes for minor validation issues only (major issues go back to planner) | DeepSeek V4 Flash / Haiku |
-| **@pr-creator** | Runs tests, creates conventional commit, verifies conflicts, creates PR | DeepSeek V4 Flash / Haiku |
+| **@pr-creator** | Runs all tests (unit + BDD), creates conventional commit, verifies conflicts, creates PR | DeepSeek V4 Flash / Haiku |
 | **@context-generator** | Generates structured business/domain docs in `docs/context/` | DeepSeek V4 Flash / Haiku |
 | **@readme-generator** | Generates professional README.md with auto-detected stack | DeepSeek V4 Flash / Haiku |
 | **@reference-extractor** | Imports external repo structure via GitHub API | DeepSeek V4 Flash / Haiku |
@@ -160,6 +168,7 @@ Framework skills load on top of language base skills:
 python-patterns          ← base language
   └── django-patterns    ← framework layer
   └── fastapi-patterns   ← framework layer
+  └── bdd-patterns       ← BDD conventions (auto-loaded when features/ detected)
 ```
 
 Run tests after changes:
@@ -182,9 +191,9 @@ your-project/
 │   └── skills/           → symlinks
 ├── agents-stack/
 │   ├── models.json       ← single source of truth for models
-│   ├── agents/           → subagent definitions (9 agents)
-│   ├── commands/         → slash command definitions (10 commands)
-│   ├── skills/           → python/, typescript/, react/, django/, fastapi/, textual/, _template/
+│   ├── agents/           → subagent definitions (10 agents)
+│   ├── commands/         → slash command definitions (11 commands)
+│   ├── skills/           → python/, typescript/, react/, django/, fastapi/, textual/, bdd/, _template/
 │   ├── tests/            → integration tests
 │   ├── install.sh
 │   ├── install.ps1

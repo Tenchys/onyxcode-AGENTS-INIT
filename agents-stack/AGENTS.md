@@ -9,18 +9,19 @@ commands below.
 ## Pipeline Overview
 
 ```bash
-/planner    →  /tasks    →  /implement  →  /validate  →  /fix(optional)  →  /pr-ready
-(plan)         (split)       (build)        (verify)       (repair)           (ship)
+/planner → [/bdd-spec (optional)] → /tasks → /implement → /validate → /fix(optional) → /pr-ready
+(plan)      (BDD scenarios)         (split)    (build)      (verify)     (repair)         (ship)
 ```
 
 | Stage | Command | Subagent | What it does |
 |-------|---------|----------|--------------|
 | 1 | `/planner "description"` | @planner | Clarifies requirements interactively, produces `plan.md`. Reads `docs/context/` if available. |
-| 2 | `/tasks` | @task-splitter | Reads `plan.md`, decomposes into atomic tasks in `tasks.md` |
-| 3 | `/implement <task-id>` | @implementer | Implements one task with clean architecture + unit tests |
-| 4 | `/validate <task-id>` | @validator | Validates implementation against plan, runs tests, classifies issues (minor/major) |
+| 2a | `/bdd-spec [--lang <code>]` | @bdd-specifier | *Optional.* Converts `plan.md` into Gherkin `.feature` files. Language auto-detected from plan or set via `--lang` (es, en, fr, de, pt, etc.). |
+| 2b | `/tasks` | @task-splitter | Reads `plan.md` (and `.feature` files if present), decomposes into atomic tasks in `tasks.md` |
+| 3 | `/implement <task-id>` | @implementer | Implements one task with clean architecture + unit tests + BDD step definitions (if features exist) |
+| 4 | `/validate <task-id>` | @validator | Validates implementation against plan, runs unit + BDD tests, classifies issues (minor/major) |
 | 5 | `/fix <task-id>` | @fixer | Applies surgical fixes for minor validation issues (major issues go back to `/planner`) |
-| 6 | `/pr-ready` | @pr-creator | Runs tests, creates commit + PR with results report |
+| 6 | `/pr-ready` | @pr-creator | Runs all tests (unit + BDD), creates commit + PR with results report |
 
 ## Utility Commands
 
