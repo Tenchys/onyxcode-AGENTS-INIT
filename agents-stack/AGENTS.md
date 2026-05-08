@@ -1,6 +1,6 @@
 # AGENTS — Subagent Pipeline Configuration
 
-This file configures a 4-stage subagent pipeline for AI-assisted software
+This file configures a 6-stage subagent pipeline for AI-assisted software
 development. Compatible with both **opencode** and **Claude Code**.
 
 Copy this file to your project root, run the installer, and use the slash
@@ -9,24 +9,30 @@ commands below.
 ## Pipeline Overview
 
 ```bash
-/planner → [/bdd-spec (optional)] → /tasks → /implement → /validate → /fix(optional) → /pr-ready
-(plan)      (BDD scenarios)         (split)    (build)      (verify)     (repair)         (ship)
+/planner → /spec → /tasks → /implement-all → /pr-ready
+(plan)     (spec)   (split)    (batch: implement→validate→fix)   (ship)
+
+Manual mode: /implement <id> → /validate <id> → /fix <id>
 ```
 
+<!-- AUTO-GEN: pipeline-table -->
 | Stage | Command | Subagent | What it does |
 |-------|---------|----------|--------------|
-| 1 | `/planner "description"` | @planner | Clarifies requirements interactively, produces `plan.md`. Reads `docs/context/` if available. |
-| 2a | `/bdd-spec [--lang <code>]` | @bdd-specifier | *Optional.* Converts `plan.md` into Gherkin `.feature` files. Language auto-detected from plan or set via `--lang` (es, en, fr, de, pt, etc.). |
-| 2b | `/tasks` | @task-splitter | Reads `plan.md` (and `.feature` files if present), decomposes into atomic tasks in `tasks.md` |
-| 3 | `/implement <task-id>` | @implementer | Implements one task with clean architecture + unit tests + BDD step definitions (if features exist) |
-| 4 | `/validate <task-id>` | @validator | Validates implementation against plan, runs unit + BDD tests, classifies issues (minor/major) |
-| 5 | `/fix <task-id>` | @fixer | Applies surgical fixes for minor validation issues (major issues go back to `/planner`) |
-| 6 | `/pr-ready` | @pr-creator | Runs all tests (unit + BDD), creates commit + PR with results report |
+| 1 | `/planner "description"` | @planner | Clarifies requirements interactively, produces `docs/pipeline/plan.md`. Reads `docs/context/` if available. |
+| 2a | `/spec [--lang <code>]` | @spec-writer | Converts `plan.md` into Gherkin `.feature` files in `docs/pipeline/features/`. Language auto-detected or set via `--lang`. Asks for user approval before proceeding. |
+| 2b | `/tasks` | @task-splitter | Reads `plan.md` and `.feature` files, decomposes into atomic tasks in `docs/pipeline/tasks.md`. Sets phase to "implementation". |
+| 3a | `/implement-all` | @batch-implementer | Batch mode: runs implement→validate→fix cycle for all pending tasks. Stops on major issues. |
+| 3b | `/implement <task-id>` | @implementer | Implements one task with clean architecture + unit tests driven by feature specs. |
+| 4 | `/validate <task-id>` | @validator | Validates implementation against plan, cross-references spec scenarios with unit tests, classifies issues (minor/major). |
+| 5 | `/fix <task-id>` | @fixer | Applies surgical fixes for minor validation issues (major issues go back to `/planner`). |
+| 6 | `/pr-ready` | @pr-creator | Runs all unit tests, creates commit + PR with results report. |
+<!-- END-AUTO-GEN -->
 
 ## Utility Commands
 
 These commands run independently of the pipeline.
 
+<!-- AUTO-GEN: utility-commands -->
 ### `/context` — Project Context Documentation
 
 Generates and maintains structured business/domain documentation about your
@@ -83,6 +89,21 @@ scripts, and test commands.
 opencode run "/readme"
 ```
 
+### `/plan-extend` — Plan Extension
+
+Extends an existing `plan.md` with a new requirement without losing prior
+planning. Invokes `@planner` in **append mode** — it reads the existing plan,
+clarifies the new requirement, and appends a new `## Extension N:` section.
+
+After extending, run `/tasks` to merge the new extension into `tasks.md`. The
+task-splitter auto-detects the extension and enters merge mode.
+
+```bash
+# Add a new feature to an existing plan
+opencode run "/plan-extend Add export to CSV"
+```
+<!-- END-AUTO-GEN -->
+
 ## Setup
 
 ### 1. Install subagent configurations
@@ -107,48 +128,62 @@ This creates the necessary symlinks/copies in `.opencode/` and `.claude/`.
 
 Add the `agent` section to your `opencode.json`:
 
+<!-- AUTO-GEN: model-config -->
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
   "agent": {
-    "planner":       { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },
-    "task-splitter": { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },
-    "implementer":   { "model": "anthropic/claude-sonnet-4-20250514", "mode": "subagent" },
-    "validator":     { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },
-    "fixer":         { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" },
-    "pr-creator":    { "model": "anthropic/claude-haiku-4-20250514",  "mode": "subagent" }
+    "planner":              { "model": "opencode-go/deepseek-v4-pro",    "mode": "subagent" },
+    "spec-writer":          { "model": "opencode-go/deepseek-v4-flash", "mode": "subagent" },
+    "task-splitter":        { "model": "opencode-go/deepseek-v4-flash", "mode": "subagent" },
+    "implementer":          { "model": "opencode-go/minimax-m2.7",      "mode": "subagent" },
+    "validator":            { "model": "opencode-go/deepseek-v4-flash", "mode": "subagent" },
+    "fixer":                { "model": "opencode-go/deepseek-v4-flash", "mode": "subagent" },
+    "pr-creator":           { "model": "opencode-go/deepseek-v4-flash", "mode": "subagent" },
+    "batch-implementer":    { "model": "opencode-go/deepseek-v4-pro",   "mode": "subagent" },
+    "context-generator":    { "model": "opencode-go/deepseek-v4-flash", "mode": "subagent" },
+    "reference-extractor":  { "model": "opencode-go/deepseek-v4-flash", "mode": "subagent" },
+    "readme-generator":     { "model": "opencode-go/deepseek-v4-flash", "mode": "subagent" }
   }
 }
 ```
+<!-- END-AUTO-GEN -->
 
 Claude Code users don't need this — models are injected by `agents-stack/install.sh`.
 
 ### 3. (Optional) Add language-specific skills
 
+<!-- AUTO-GEN: skills-list -->
 Copy `agents-stack/skills/_template/` to `agents-stack/skills/<language>/` and customize
 `SKILL.md`. The implementer will auto-detect the project stack and load the
 matching skill.
 
 After adding a skill, re-run `agents-stack/install.sh`.
 
+| Name | Description |
+|------|-------------|
+| django-patterns | Django conventions with ORM, class-based views, forms, DRF, Celery, and clean architecture patterns. |
+| fastapi-patterns | FastAPI conventions with SQLAlchemy async, Pydantic v2, Alembic, and clean architecture patterns. |
+| python-patterns | Python general conventions (type hints, testing, linting, clean architecture). Framework-agnostic base skill. |
+| react-patterns | React conventions with hooks, components, TanStack Query, React Router, testing, and clean architecture patterns. |
+| textual-patterns | Textual TUI conventions — App/Screen/Widget composition, TCSS styling, reactive attributes, message passing, workers, and pytest-based testing. |
+| typescript-patterns | TypeScript general conventions (strict mode, testing, linting, clean architecture). Framework-agnostic base skill. |
+<!-- END-AUTO-GEN -->
+
 ## Usage Examples
 
 ```bash
 # OpenCode
 opencode run "/planner Add a dark mode toggle to settings"
+opencode run "/spec"
 opencode run "/tasks"
-opencode run "/implement 1"
-opencode run "/validate 1"
-opencode run "/fix 1"
-opencode run "/pr-ready"
+opencode run "/implement-all"
 
 # Claude Code
 claude -p "/planner Add user authentication with OAuth"
+claude -p "/spec"
 claude -p "/tasks"
-claude -p "/implement 3"
-claude -p "/validate 3"
-claude -p "/fix 3"
-claude -p "/pr-ready"
+claude -p "/implement-all"
 ```
 
 ## Project Structure (after install)
@@ -163,7 +198,14 @@ claude -p "/pr-ready"
 │   ├── agents/           → copies with model injected
 │   ├── commands/         → symlinks to agents-stack/commands/
 │   └── skills/           → symlinks to agents-stack/skills/
-├── AGENTS.md             ← this file
-├── plan.md               ← generated by /planner
-└── tasks.md              ← generated by /tasks
+├── docs/pipeline/        ← generated by pipeline
+│   ├── plan.md           ← generated by /planner
+│   ├── tasks.md          ← generated by /tasks
+│   ├── state.json        ← pipeline phase tracking
+│   ├── features/         ← generated by /spec
+│   │   └── .specconfig
+│   └── reports/          ← generated by /validate and /fix
+│       ├── validate/
+│       └── fix/
+└── AGENTS.md             ← this file
 ```

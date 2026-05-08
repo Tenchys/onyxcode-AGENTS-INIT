@@ -1,5 +1,7 @@
 ---
 description: Imports external repository documentation to docs/references/. Run /reference --repo <url> to get repo structure for AI agent context.
+category: utility
+command: reference
 mode: subagent
 permission:
   edit: allow

@@ -36,6 +36,14 @@
     "reference-extractor": {
       "model": "opencode-go/deepseek-v4-flash",
       "mode": "subagent"
+    },
+    "spec-writer": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "mode": "subagent"
+    },
+    "batch-implementer": {
+      "model": "opencode-go/deepseek-v4-pro",
+      "mode": "subagent"
     }
   }
 }

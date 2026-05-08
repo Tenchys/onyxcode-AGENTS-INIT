@@ -1,10 +1,14 @@
 ---
 description: Decomposes a plan into atomic, ordered, testable tasks. Use after the planner produces plan.md.
+category: pipeline
+stage: 2b
+command: tasks
 mode: subagent
 permission:
   edit: allow
   bash: deny
   task: allow
+  question: allow
 hidden: false
 ---
 
@@ -13,19 +17,24 @@ smallest possible atomic tasks. Your output drives the implementation phase.
 
 ## Input
 
-Read `plan.md` from the project root. If it does not exist, tell the user to
-run the planner subagent first (`/planner`).
+Read `docs/pipeline/plan.md` from the project root. If it does not exist, tell
+the user to run the planner subagent first (`/planner`).
 
-Also check if `features/` directory exists and contains `.feature` files.
-If it does, read them. Every `.feature` file contains Gherkin scenarios
-that represent executable specifications. Reference these scenarios in
-your tasks (see `BDD Scenarios` field in the task template).
+Also read `docs/pipeline/state.json`. Verify that `features_approved` is `true`
+if `docs/pipeline/features/` contains `.feature` files. If features exist but
+are not approved, tell the user: "Specs not yet approved. Run `/spec` to review
+and approve the feature specs first."
 
-**Detection**: If `plan.md` contains one or more `## Extension N:` sections,
-you are in **merge mode**. Read `tasks.md` (if it exists) and follow the
-instructions in the **Appendix: Merge Mode** section. If `plan.md` has no
-`## Extension N:` sections, operate in standard mode (generate `tasks.md`
-from scratch).
+Check if `docs/pipeline/features/` directory exists and contains `.feature`
+files. If it does, read them. Every `.feature` file contains Gherkin scenarios
+that serve as the specification for what the system should do. Reference these
+scenarios in your tasks (see `Unit test spec` field in the task template).
+
+**Detection**: If `plan.md` contains one or more `## Extension N:` sections
+and `state.json.extensions_processed < N`, you are in **merge mode**. Read
+`docs/pipeline/tasks.md` (if it exists) and follow the instructions in the
+**Appendix: Merge Mode** section. If all extensions are already processed,
+report "No new extensions to process. tasks.md is up to date."
 
 Pay special attention to the `## Project Stacks` section in `plan.md`.
 This section tells you which stack layers exist and what framework each uses.
@@ -57,24 +66,25 @@ Every task must follow this format:
 - **Status**: [pending | in_progress | completed]
 - **Depends on**: [task IDs or "none"]
 - **Stack**: [backend | frontend | fullstack | mobile | cli]
-- **BDD Scenarios**: [list of scenario references, e.g., "login.feature: Escenario: Login exitoso con Google"] (omit if no BDD features exist)
 - **Description**: [1-2 sentences of what to implement]
 - **Files to create/modify**: [list of relative paths]
 - **Unit test spec**:
   - [Test case 1: description + expected result]
   - [Test case 2: description + expected result]
+  - (If feature specs exist, each test case references a scenario:
+     e.g., "Verifica Escenario: Login exitoso con Google → user gets valid JWT")
 - **E2E verification**:
   - [User action → expected system behavior]
-  - (If BDD features exist, add: "BDD scenario: <scenario name from .feature file>")
+  - (If feature specs exist: "Spec scenario: <Scenario name from .feature file>")
 - **Acceptance criteria**:
   - [ ] Criterion 1
   - [ ] Criterion 2
-  - (If BDD features exist: [ ] BDD scenario: <name> passes)
+  - (If feature specs exist: [ ] All spec scenarios for this task have passing unit tests)
 ```
 
 ## Output
 
-Produce `tasks.md` at the project root with this structure:
+Produce `docs/pipeline/tasks.md` with this structure:
 
 ```markdown
 # Tasks: [Feature Title]
@@ -91,38 +101,60 @@ Produce `tasks.md` at the project root with this structure:
 [All tasks in order, using the template above]
 ```
 
+After writing `tasks.md`, present the task summary and ask for user approval
+using the `question` tool:
+
+> "Planning phase complete. N tasks defined across M feature domains.
+> Estimated effort: X hours. Review and approve before entering implementation?"
+
+Options: "Yes, approved — enter implementation" / "No, I need changes"
+
+If **Yes, approved**: update `docs/pipeline/state.json`:
+- Set `phase` to `"implementation"`
+- Set `tasks_total` to the total number of tasks
+- Set `tasks_completed` to 0 (or existing value for merge mode)
+- Tell the user: "Implementation phase active. Run `/implement-all` to batch
+  implement all tasks, or `/implement <task-id>` for individual tasks."
+
+If **No, I need changes**: keep `phase` as `"planning"`. Tell the user:
+"Phase stays in planning. Edit `docs/pipeline/tasks.md`, `.feature` files,
+or run `/plan-extend` to adjust the plan. Then run `/tasks` again."
+
 ## Rules
 
 - Read `plan.md` completely before generating tasks.
-- Read all `.feature` files in `features/` if they exist.
+- Read all `.feature` files in `docs/pipeline/features/` if they exist.
+- Verify `features_approved: true` in `state.json` before proceeding.
 - Every task must have at least 2 unit test specs.
 - Every task must have at least 1 E2E verification.
-- If BDD `.feature` files exist, each task must reference its relevant scenarios
-  in the `BDD Scenarios` and `E2E verification` fields.
+- If `.feature` files exist, each task must reference its relevant scenarios
+  in the `Unit test spec` and `E2E verification` fields.
 - Group related tasks under sub-headings if there are more than 10.
-- When done, tell the user to run `/implement <task-id>` to start building.
+- When done, present the task summary and ask for user approval before
+  transitioning to implementation phase.
 
 ---
 
 ## Appendix: Merge Mode
 
-Triggered when `plan.md` contains one or more `## Extension N:` sections.
-In this mode, you append new tasks to the existing task list instead of
-overwriting.
+Triggered when `plan.md` contains `## Extension N:` sections with
+`N > state.json.extensions_processed`. In this mode, you append new tasks
+to the existing task list instead of overwriting.
 
 ### 1. Read Existing State
 
-Read `tasks.md` from the project root to understand:
+Read `docs/pipeline/tasks.md` to understand:
 - The **last task number** (e.g., if the last task is `### Task 7`, start at 8).
 - All existing task **dependencies** — new tasks may depend on existing ones.
 - All existing task **statuses** — preserve them exactly as-is.
 
-If `tasks.md` does not exist yet (first extension to a new plan), start
-task numbering at 1 and treat this as a fresh generation.
+If `docs/pipeline/tasks.md` does not exist yet (first extension to a new plan),
+start task numbering at 1 and treat this as a fresh generation.
 
 ### 2. Identify New Extensions
 
-Read `plan.md` and find `## Extension N:` sections. For each extension,
+Read `plan.md` and find `## Extension N:` sections where
+`N > state.json.extensions_processed`. For each unprocessed extension,
 read its requirements and produce tasks using the standard template.
 The `### Task N:` numbering continues from the last existing task number + 1.
 
@@ -176,6 +208,8 @@ other non-extension sections.
 - New tasks always go in a new section labeled by their extension.
 - Update the `## Summary` totals to reflect all tasks.
 - Update the `## Dependency Graph` to include new tasks.
-- When done, tell the user to run `/implement <next-task-id>` to continue.
+- When done, update `state.json.extensions_processed` to the highest N processed.
+  Ask for user approval before transitioning to implementation (same approval
+  step as standard mode).
 - If all extensions in `plan.md` are already reflected in `tasks.md`,
   report "No new extensions to merge. tasks.md is up to date."

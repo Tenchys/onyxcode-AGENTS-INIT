@@ -1,5 +1,8 @@
 ---
 description: Validates that an implemented task matches its plan spec, runs tests, and suggests fixes with severity classification. Use after /implement and before /pr-ready.
+category: pipeline
+stage: 4
+command: validate
 mode: subagent
 permission:
   edit: deny
@@ -14,17 +17,23 @@ original plan and their task specifications, then produce actionable reports.
 
 ## Workflow
 
+### Step 0: Phase gate
+
+Read `docs/pipeline/state.json`. Verify that `phase` is `"implementation"`.
+If not, tell the user which phase they are in and what command to run next.
+
 ### Step 1: Identify the task to validate
 
-Read `tasks.md` from the project root. If a task ID is provided (e.g.,
+Read `docs/pipeline/tasks.md`. If a task ID is provided (e.g.,
 `/validate 3`), validate that task. If no ID is provided, find the most recently
 completed task (status: `completed`) and validate it. If no completed task is
 found, ask the user which task to validate.
 
 ### Step 2: Read context
 
-Read the task's specification from `tasks.md`. Read `plan.md` to understand the
-overall requirements that this task should satisfy.
+Read the task's specification from `docs/pipeline/tasks.md`. Read
+`docs/pipeline/plan.md` to understand the overall requirements that this task
+should satisfy.
 
 Extract from the task:
 - **Description**: what the task should do
@@ -52,15 +61,18 @@ Read the test files associated with the task. Verify:
 - Tests cover the task description's core functionality
 - Edge cases from `plan.md` are covered where applicable
 
-### Step 4b: Check BDD scenarios
+### Step 4b: Cross-reference spec scenarios with unit tests
 
-If the task has a `BDD Scenarios` field or `features/` exists:
-1. Read the referenced `.feature` files
-2. Check that every Gherkin step has a corresponding step definition
-   (no "undefined step" errors when running the BDD runner)
-3. Verify that step definitions actually call production code
-   (not empty/placeholder implementations)
-4. Check BDD scenario names match the task's acceptance criteria
+If the task references feature specs or `docs/pipeline/features/` exists:
+1. Read the task's `Unit test spec` and `E2E verification` fields to find
+   which scenarios are referenced.
+2. Read the unit test files associated with the task.
+3. For each referenced Gherkin scenario, verify that at least one unit test
+   exists that mentions the scenario by name in its docstring or function name.
+4. If a scenario has no matching unit test → **minor issue**: "Missing test
+   coverage for scenario: `<Scenario name>`".
+5. If a unit test verifies behavior that doesn't match the spec → **minor
+   issue**: "Test `<name>` doesn't match spec: `<mismatch>`".
 
 ### Step 5: Run unit tests
 
@@ -72,17 +84,6 @@ Detect the test runner (same logic as pr-creator):
 - `Makefile` → look for `test` target
 
 Run the full unit test suite and capture the results.
-
-### Step 5b: Run BDD tests (if present)
-
-If `features/` directory exists with `.feature` files:
-1. Detect the BDD runner:
-   - Python project → `behave features/`
-   - Node.js project (has `@cucumber/cucumber` in package.json) → `npx cucumber-js`
-2. Run the BDD runner and capture the results:
-   - Total scenarios, passed, failed, undefined steps
-   - List any failed/undefined scenarios
-3. If BDD runner is not found, skip this step and report "No BDD runner detected"
 
 ### Step 6: Validate against plan
 
@@ -131,12 +132,11 @@ Tests: N total, N passed, N failed, N skipped
 
 <If failures: list each failed test with error>
 
-### BDD Results (if applicable)
-Command: <bdd command>
-Result: PASSED / FAILED
-Scenarios: N total, N passed, N failed, N undefined
-
-<If failures: list each failed scenario with the failing step>
+### Spec Coverage (if applicable)
+| Scenario | Unit Test | Status |
+|----------|-----------|--------|
+| Escenario: Login exitoso | test_login_success | covered |
+| Escenario: Token expirado | — | missing |
 
 ### Plan Compliance
 - FR-<N>: [pass / fail] — <details>
@@ -161,9 +161,24 @@ Scenarios: N total, N passed, N failed, N undefined
 - If FAIL with major issues: run `/planner "fix: <issue summary>"` to extend the plan
 ```
 
-### Step 9: Guidance
+### Step 9: Save the report
 
-After the report, tell the user what to do next based on the verdict:
+After emitting the report, save it to a file using bash:
+
+```bash
+mkdir -p docs/pipeline/reports/validate
+cat > docs/pipeline/reports/validate/task-<task-id>.md << 'REPORT'
+## Validation Report: Task N - [Title]
+...
+REPORT
+```
+
+Copy the full report content you just generated into the heredoc. This file
+will be read by the @fixer subagent in the next step.
+
+### Step 10: Guidance
+
+After saving the report, tell the user what to do next based on the verdict:
 
 - **ALL PASS**: "All checks passed. Run `/pr-ready` when all tasks are done."
 - **MINOR ISSUES ONLY**: "N minor issues found. Run `/fix <task-id>` to apply fixes automatically."

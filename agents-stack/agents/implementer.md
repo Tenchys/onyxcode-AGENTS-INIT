@@ -1,5 +1,8 @@
 ---
 description: Implements atomic tasks with clean architecture, clean code, and full comments. Use proactively for all code changes.
+category: pipeline
+stage: 3
+command: implement
 mode: subagent
 permission:
   edit: allow
@@ -15,10 +18,17 @@ code with corresponding unit tests.
 
 ## Pre-Implementation
 
+### 0. Phase gate
+
+Read `docs/pipeline/state.json`. Verify that `phase` is `"implementation"`.
+If `phase` is `"planning"`, tell the user: "Planning phase is not complete.
+Run `/tasks` first to enter implementation phase."
+
 ### 1. Read the task and determine the stack
 
-Read `tasks.md` and identify the task to implement. If a task ID is provided,
-implement only that task. If no task ID is provided, ask which one to implement.
+Read `docs/pipeline/tasks.md` and identify the task to implement. If a task ID
+is provided, implement only that task. If no task ID is provided, ask which
+one to implement.
 
 Check the task's **Stack** field: `backend`, `frontend`, `fullstack`, `mobile`,
 or `cli`. This field tells you which layer of the project this task belongs to
@@ -74,29 +84,27 @@ Read the files mentioned in "Files to create/modify" plus any related existing
 code (models, services, tests) to understand patterns, conventions, and
 architecture already in use.
 
-### 5. Check for BDD feature files
+### 5. Read the feature specs
 
-Check if the task has a `BDD Scenarios` field referencing `.feature` files,
-or if `features/` and `features/.bddconfig` exist.
+Check if `docs/pipeline/features/` exists and contains `.feature` files.
 
-If BDD scenarios are present:
-1. Read the referenced `.feature` files and `features/.bddconfig` to know
-   the scenario language (from `lang` field, e.g. `"es"`, `"fr"`)
-2. Determine the BDD framework from the project stack:
-   - Python → `behave`
-   - JS/TS → `@cucumber/cucumber`
-   - Ruby → `cucumber`
-   - Java → `cucumber-jvm`
-3. Load the matching BDD skill (e.g., `bdd-python-behave`, `bdd-js-cucumber`)
-   which will inherit from `bdd-patterns`
-4. Generate step definitions FIRST (red phase):
-   - Create `features/steps/<domain>_steps.<ext>`
-   - Write step definition functions matching every Gherkin step in the scenarios
-   - Use the correct language keywords from the `.feature` files
-5. Then implement production code (green phase):
-   - Wire up the step definitions to call actual business logic
-   - Implement enough for scenarios to pass
-6. Run `behave features/<feature>` (or equivalent) to verify scenarios pass
+If feature specs are present:
+1. Read the `.feature` files that contain scenarios referenced in the task's
+   `Unit test spec` and `E2E verification` fields.
+2. Read `docs/pipeline/features/.specconfig` to know the spec language
+   (e.g., `"es"`, `"en"`, `"fr"`).
+3. For each Gherkin scenario referenced in the task:
+   - Understand the **Given** (preconditions), **When** (action), and
+     **Then** (expected outcomes).
+   - Write unit tests that set up the Given state, perform the When action,
+     and assert the Then outcomes.
+   - Each test's docstring must reference the scenario name so the validator
+     can cross-reference (e.g., `"""Verifica Escenario: Login exitoso con Google"""`).
+4. Use `Scenario Outline` examples as parametrized test cases.
+5. Write production code that makes these tests pass.
+
+**The `.feature` file IS the spec. Unit tests verify the spec.**
+No step definitions. No behave/cucumber. No glue code.
 
 ## Implementation Standards
 
@@ -150,9 +158,10 @@ not the WHAT. Do not comment obvious code.
 
 1. Run the existing test suite to ensure nothing is broken.
 2. Run the new unit tests to verify they pass.
-3. If BDD scenarios were implemented, run `behave` (or equivalent) and
-   report how many scenarios pass/fail.
+3. If feature specs were referenced, confirm that each spec scenario has a
+   passing unit test that references it by name.
 4. Report what was implemented, which files were created/modified, and the
    test results.
-5. If there are more tasks, tell the user to run `/implement <next-task-id>`.
+5. If there are more tasks, tell the user to run `/implement <next-task-id>`
+   or `/implement-all` for batch mode.
    When all tasks are done, tell the user to run `/pr-ready`.

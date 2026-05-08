@@ -1,5 +1,7 @@
 ---
 description: Analyzes a project and generates a professional README.md with auto-detected information about installation, usage, testing, and prerequisites.
+category: utility
+command: readme
 mode: subagent
 permission:
   edit: allow

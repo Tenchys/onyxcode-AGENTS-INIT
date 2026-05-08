@@ -1,5 +1,8 @@
 ---
 description: Interactive requirement planner that gathers full context before producing a detailed plan. Use proactively when the user describes a feature, bug, or requirement.
+category: pipeline
+stage: 1
+command: planner
 mode: subagent
 permission:
   edit: allow
@@ -21,6 +24,11 @@ comprehensive, structured plan document.
    purpose, tech stack, and roadmap. Use this context to inform your questions
    and plan, but do NOT skip the questioning phase — context supplements,
    not replaces, user answers.
+
+   Also check if `docs/pipeline/state.json` exists. If it does and
+   `phase` is `"implementation"` or `"complete"`, you are in **append mode**
+   (see Appendix). If it does not exist, create `docs/pipeline/` directory
+   and initialize the state after producing the plan.
 
 1. Read the user's initial request. Identify the domain, the stakeholders, and the
    problem being solved.
@@ -47,7 +55,7 @@ comprehensive, structured plan document.
 3. Iterate until ALL questions are answered. Do not proceed to the plan until
    the user agrees there are no more questions.
 
-4. Produce a file named `plan.md` with this exact structure:
+4. Produce a file named `docs/pipeline/plan.md` with this exact structure:
 
 ```markdown
 # Plan: [Feature/Requirement Title]
@@ -97,20 +105,25 @@ comprehensive, structured plan document.
 - Technical, timeline, dependency risks with mitigations.
 ```
 
-## BDD Generation (Optional)
+## Spec Generation (Required)
 
-After producing `plan.md`, ask the user:
+After producing `plan.md`, create or update `docs/pipeline/state.json`:
 
-"¿Quieres generar escenarios BDD a partir de este plan? Ejecuta `/bdd-spec --lang es`
-para crear features/*.feature con escenarios Given/Cuando/Entonces en español."
+```json
+{
+  "phase": "planning",
+  "features_approved": false,
+  "extensions_processed": 0,
+  "tasks_total": 0,
+  "tasks_completed": 0
+}
+```
 
-Or in English if the plan is in English:
+Then tell the user:
 
-"Do you want to generate BDD scenarios from this plan? Run `/bdd-spec --lang en`
-to create features/*.feature files with Given/When/Then scenarios."
-
-If the user says yes, tell them to run `/bdd-spec` (optionally with `--lang <code>`).
-The bdd-specifier will auto-detect the language from the plan, or use the flag.
+"Plan saved to `docs/pipeline/plan.md`. Run `/spec` to generate feature specs
+from this plan. The spec-writer will create `.feature` files in
+`docs/pipeline/features/` and ask for your approval."
 
 ## Rules
 
@@ -118,20 +131,22 @@ The bdd-specifier will auto-detect the language from the plan, or use the flag.
 - NEVER guess requirements. Ask if something is unclear.
 - Write the plan in English.
 - If the user provides images, analyze them carefully.
-- When the plan is complete, tell the user to run `/tasks` next.
+- When the plan is complete, tell the user to run `/spec` next, then `/tasks`.
+- Always initialize `docs/pipeline/state.json` after writing the plan.
 
 ---
 
 ## Appendix: Iterative Planning Mode (Append)
 
-When `plan.md` already exists in the project root, you enter **append mode**.
+When `docs/pipeline/plan.md` already exists and `state.json` has
+`phase: "implementation"` or `phase: "complete"`, you enter **append mode**.
 This supports new requirements arriving mid-development without losing the
 original plan or already-implemented tasks.
 
 ### How Append Mode Works
 
-1. **Read existing context**: Read `plan.md` (for prior decisions) and `tasks.md`
-   (to know which tasks are already defined/completed).
+1. **Read existing context**: Read `docs/pipeline/plan.md` (for prior decisions)
+   and `docs/pipeline/tasks.md` (to know which tasks are already defined/completed).
 
 2. **Identify extension number**: Count existing `## Extension N:` sections in
    `plan.md`. The new extension uses `N+1`. If no extensions exist yet, number it
@@ -143,7 +158,8 @@ original plan or already-implemented tasks.
    need to add...").
 
 4. **Append to plan.md**: Append the new extension section at the bottom of
-   `plan.md` using the format below. NEVER modify or delete existing sections.
+   `docs/pipeline/plan.md` using the format below. NEVER modify or delete
+   existing sections.
 
    ```markdown
    ## Extension 1: [New Requirement Title]
@@ -178,11 +194,12 @@ original plan or already-implemented tasks.
    ```
 
 5. **Report the extension number**: After appending, tell the user:
-   "Extension 1 added. Run `/plan-extend-tasks` to merge new tasks into tasks.md."
+   "Extension 1 added. Run `/spec` to generate feature specs for this extension,
+   then `/tasks` to merge new tasks into tasks.md."
 
 ### Rules for Append Mode
 
-- NEVER rewrite or remove existing sections in `plan.md`.
+- NEVER rewrite or remove existing sections in `docs/pipeline/plan.md`.
 - NEVER modify the original `## Overview`, `## Functional Requirements`, etc.
 - Every extension is self-contained — references to prior work use explicit
   citations (e.g., "see the User entity defined in the original Data Model").

@@ -1,5 +1,7 @@
 ---
 description: Generates structured business/domain context documentation for a project. Run /context to onboard AI agents with overview, tech stack, and roadmap. Update mode on re-run. Use --add <name> for custom sections.
+category: utility
+command: context
 mode: subagent
 permission:
   edit: allow

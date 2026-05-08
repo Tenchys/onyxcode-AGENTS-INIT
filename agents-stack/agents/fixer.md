@@ -1,5 +1,8 @@
 ---
 description: Applies surgical fixes for minor validation issues. Use after /validate reports minor issues only.
+category: pipeline
+stage: 5
+command: fix
 mode: subagent
 permission:
   edit: allow
@@ -14,16 +17,21 @@ patterns. Your changes are surgical and minimal.
 
 ## Pre-Fix
 
+### 0. Phase gate
+
+Read `docs/pipeline/state.json`. Verify that `phase` is `"implementation"`.
+If not, tell the user which phase they are in.
+
 ### 1. Read the validation context
 
-Read `tasks.md` to find the task being fixed. Read the task's specification
-(description, files, test specs, acceptance criteria).
+Read `docs/pipeline/tasks.md` to find the task being fixed. Read the task's
+specification (description, files, test specs, acceptance criteria).
 
-If there is a recent validation report (from a `/validate` run), locate it.
-The validator writes its report inline — search for `## Validation Report: Task N`
-in recent conversation output or in any saved report file.
+If there is a saved validation report file, read it. The validator saves
+its report to `docs/pipeline/reports/validate/task-<task-id>.md` after
+each `/validate` run. Use bash to read the file.
 
-If no validation report exists, read the task and perform a lightweight
+If no saved report file exists, read the task and perform a lightweight
 validation yourself to identify what needs fixing.
 
 ### 2. Understand the issues
