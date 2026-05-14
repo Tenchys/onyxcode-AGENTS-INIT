@@ -1,5 +1,5 @@
 ---
-description: Decomposes a plan into atomic, ordered, testable tasks. Use after the planner produces plan.md.
+description: Decomposes a plan into atomic, ordered, testable tasks. Use after the planner produces plan/ directory.
 category: pipeline
 stage: 2b
 command: tasks
@@ -17,8 +17,20 @@ smallest possible atomic tasks. Your output drives the implementation phase.
 
 ## Input
 
-Read `docs/pipeline/plan.md` from the project root. If it does not exist, tell
-the user to run the planner subagent first (`/planner`).
+Read the plan section files from `docs/pipeline/plan/`. Check that
+`docs/pipeline/plan/index.md` exists first — if it does not, tell the user
+to run the planner subagent first (`/planner`).
+
+Read these section files for content:
+- `docs/pipeline/plan/index.md` (project stacks, overview, implementation order)
+- `docs/pipeline/plan/requirements.md` (functional + non-functional requirements)
+- `docs/pipeline/plan/data-model.md` (entities, constraints)
+- `docs/pipeline/plan/api.md` (API contracts)
+- `docs/pipeline/plan/ui.md` (UI/UX design)
+- `docs/pipeline/plan/edge-cases.md` (edge cases)
+- `docs/pipeline/plan/testing.md` (testing strategy)
+
+For extension tasks, also read files from `docs/pipeline/plan/extensions/`.
 
 Also read `docs/pipeline/state.json`. Verify that `features_approved` is `true`
 if `docs/pipeline/features/` contains `.feature` files. If features exist but
@@ -30,13 +42,14 @@ files. If it does, read them. Every `.feature` file contains Gherkin scenarios
 that serve as the specification for what the system should do. Reference these
 scenarios in your tasks (see `Unit test spec` field in the task template).
 
-**Detection**: If `plan.md` contains one or more `## Extension N:` sections
-and `state.json.extensions_processed < N`, you are in **merge mode**. Read
-`docs/pipeline/tasks.md` (if it exists) and follow the instructions in the
-**Appendix: Merge Mode** section. If all extensions are already processed,
-report "No new extensions to process. tasks.md is up to date."
+**Detection**: If `docs/pipeline/plan/extensions/` directory exists and
+`state.json.extensions_processed < N` (where N is the count of extension files),
+you are in **merge mode**. Read `docs/pipeline/tasks.md` (if it exists) and
+follow the instructions in the **Appendix: Merge Mode** section. If all
+extensions are already processed, report "No new extensions to process.
+tasks.md is up to date."
 
-Pay special attention to the `## Project Stacks` section in `plan.md`.
+Pay special attention to the `## Project Stacks` section in `plan/index.md`.
 This section tells you which stack layers exist and what framework each uses.
 Every task you produce must include a `Stack` field set to one of the layers
 from that section (e.g., `backend`, `frontend`).
@@ -122,7 +135,7 @@ or run `/plan-extend` to adjust the plan. Then run `/tasks` again."
 
 ## Rules
 
-- Read `plan.md` completely before generating tasks.
+- Read all plan section files before generating tasks.
 - Read all `.feature` files in `docs/pipeline/features/` if they exist.
 - Verify `features_approved: true` in `state.json` before proceeding.
 - Every task must have at least 2 unit test specs.
@@ -137,7 +150,7 @@ or run `/plan-extend` to adjust the plan. Then run `/tasks` again."
 
 ## Appendix: Merge Mode
 
-Triggered when `plan.md` contains `## Extension N:` sections with
+Triggered when `docs/pipeline/plan/extensions/` contains extension files with
 `N > state.json.extensions_processed`. In this mode, you append new tasks
 to the existing task list instead of overwriting.
 
@@ -153,10 +166,11 @@ start task numbering at 1 and treat this as a fresh generation.
 
 ### 2. Identify New Extensions
 
-Read `plan.md` and find `## Extension N:` sections where
-`N > state.json.extensions_processed`. For each unprocessed extension,
-read its requirements and produce tasks using the standard template.
-The `### Task N:` numbering continues from the last existing task number + 1.
+List files in `docs/pipeline/plan/extensions/`. Parse the extension number
+from each filename (format `NN-<slug>.md`). For extensions where
+`N > state.json.extensions_processed`, read the file and produce tasks using
+the standard template. The `### Task N:` numbering continues from the last
+existing task number + 1.
 
 Only process extension sections that have NOT been reflected in `tasks.md`
 yet. To determine this, check if `tasks.md` already has a
@@ -196,8 +210,8 @@ Produce `tasks.md` with this structure:
 ```
 
 If `tasks.md` didn't exist before (first extension), treat `Existing Tasks`
-as the tasks generated from the original `## Functional Requirements` and
-other non-extension sections.
+as the tasks generated from `plan/requirements.md` and other non-extension
+section files.
 
 ### Rules for Merge Mode
 
@@ -211,5 +225,6 @@ other non-extension sections.
 - When done, update `state.json.extensions_processed` to the highest N processed.
   Ask for user approval before transitioning to implementation (same approval
   step as standard mode).
-- If all extensions in `plan.md` are already reflected in `tasks.md`,
-  report "No new extensions to merge. tasks.md is up to date."
+- If all extension files in `docs/pipeline/plan/extensions/` are already
+  reflected in `tasks.md`, report "No new extensions to merge.
+  tasks.md is up to date."

@@ -31,9 +31,20 @@ found, ask the user which task to validate.
 
 ### Step 2: Read context
 
-Read the task's specification from `docs/pipeline/tasks.md`. Read
-`docs/pipeline/plan.md` to understand the overall requirements that this task
-should satisfy.
+Read the task's specification from `docs/pipeline/tasks.md`.
+
+Read only the relevant plan section files based on the task's **Stack** field:
+
+- Always read: `docs/pipeline/plan/requirements.md` (functional requirements)
+- Always read: `docs/pipeline/plan/edge-cases.md` (edge cases)
+- If `Stack` is `backend`/`fullstack`: read `docs/pipeline/plan/data-model.md`
+  and `docs/pipeline/plan/api.md`
+- If `Stack` is `frontend`/`fullstack`: read `docs/pipeline/plan/ui.md`
+- If the task references an extension, read the corresponding extension file
+  from `docs/pipeline/plan/extensions/`
+
+Do NOT read `docs/pipeline/plan/index.md` (stacks, overview, risks) — it is
+not needed for validation and would waste context.
 
 Extract from the task:
 - **Description**: what the task should do
@@ -59,7 +70,7 @@ Read the test files associated with the task. Verify:
 - Each test case from `Unit test spec` has a corresponding test
 - At least 2 test cases exist (if the spec lists 2+)
 - Tests cover the task description's core functionality
-- Edge cases from `plan.md` are covered where applicable
+- Edge cases from `plan/edge-cases.md` are covered where applicable
 
 ### Step 4b: Cross-reference spec scenarios with unit tests
 
@@ -87,7 +98,8 @@ Run the full unit test suite and capture the results.
 
 ### Step 6: Validate against plan
 
-Cross-reference the implementation with `plan.md`:
+Cross-reference the implementation with the plan section files you read in
+Step 2 (requirements.md, data-model.md, api.md, ui.md, edge-cases.md):
 - Which `Functional Requirements` does this task address?
 - Is each requirement covered by code + tests?
 - Are `Edge Cases` from the plan handled?
@@ -191,4 +203,4 @@ After saving the report, tell the user what to do next based on the verdict:
 - NEVER skip running tests.
 - Classify severity accurately — don't mark architectural problems as `minor`.
 - Every issue must include a specific file path and a concrete fix suggestion.
-- If `tasks.md` or `plan.md` are missing, tell the user to run `/planner` first.
+- If `tasks.md` or `docs/pipeline/plan/index.md` is missing, tell the user to run `/planner` first.

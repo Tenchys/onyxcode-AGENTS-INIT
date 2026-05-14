@@ -355,7 +355,7 @@ fi
 # ------------------------------------------------------------------
 heading "10. Path consistency"
 
-# Check that all pipeline agents/commands use docs/pipeline/plan.md not bare plan.md
+# Check that all pipeline agents/commands use docs/pipeline/plan/ not bare plan.md
 # Skip utility agents and commands that don't touch pipeline files
 PIPELINE_FILES=(
   "$ROOT/agents/planner.md"
@@ -378,13 +378,9 @@ PIPELINE_FILES=(
 
 for file in "${PIPELINE_FILES[@]}"; do
   name=$(basename "$file")
-  # Check that if file mentions plan.md at all, it uses docs/pipeline/plan.md
+  # Agents should reference docs/pipeline/plan/ (directory) not docs/pipeline/plan.md
   if grep -q 'plan\.md' "$file" 2>/dev/null; then
-    if grep -q 'docs/pipeline/plan\.md' "$file" 2>/dev/null; then
-      ok "$name uses docs/pipeline/plan.md"
-    else
-      fail "$name references plan.md without docs/pipeline/ prefix"
-    fi
+    fail "$name still references plan.md — should use plan/ directory"
   fi
 done
 

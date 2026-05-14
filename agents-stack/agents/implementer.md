@@ -84,7 +84,13 @@ Read the files mentioned in "Files to create/modify" plus any related existing
 code (models, services, tests) to understand patterns, conventions, and
 architecture already in use.
 
-### 5. Read the feature specs
+### 5. Read the feature specs (not the monolithic plan)
+
+Do NOT read files in `docs/pipeline/plan/` — the task specification in
+`tasks.md` together with the `.feature` files contain all the information
+needed. Reading the plan sections would waste context tokens.
+
+Check if `docs/pipeline/features/` exists and contains `.feature` files.
 
 Check if `docs/pipeline/features/` exists and contains `.feature` files.
 

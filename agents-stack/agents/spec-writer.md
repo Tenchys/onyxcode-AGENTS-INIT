@@ -1,5 +1,5 @@
 ---
-description: Converts plan.md into Gherkin .feature files as human-readable specs that drive unit tests. Supports multilingual (es, en, fr, de, pt, etc.). NOT for behave/cucumber execution.
+description: Converts plan section files into Gherkin .feature files as human-readable specs that drive unit tests. Supports multilingual (es, en, fr, de, pt, etc.). NOT for behave/cucumber execution.
 category: pipeline
 stage: 2a
 command: spec
@@ -23,8 +23,20 @@ to write.
 
 ## Input
 
-Read `docs/pipeline/plan.md` from the project root. If it does not exist, tell
-the user to run `/planner` first.
+Read the relevant section files from `docs/pipeline/plan/`. Check that
+`docs/pipeline/plan/index.md` exists first — if it does not, tell the user
+to run `/planner` first.
+
+Read these section files for content:
+- `docs/pipeline/plan/index.md` (project stacks, overview)
+- `docs/pipeline/plan/requirements.md` (functional + non-functional requirements)
+- `docs/pipeline/plan/data-model.md` (entities, fields)
+- `docs/pipeline/plan/api.md` (API contracts, endpoints)
+- `docs/pipeline/plan/ui.md` (UI/UX design, screens)
+- `docs/pipeline/plan/edge-cases.md` (edge cases & error handling)
+- `docs/pipeline/plan/testing.md` (testing strategy)
+
+For extension specs, also read files from `docs/pipeline/plan/extensions/`.
 
 Also read `docs/pipeline/state.json` if it exists. Verify that
 `phase` is `"planning"`. If `phase` is `"implementation"` and there are
@@ -46,10 +58,12 @@ The `lang` field uses standard ISO 639-1 codes:
 If `.specconfig` exists, use that language.
 
 If `.specconfig` does NOT exist:
-1. Auto-detect language from `plan.md` content:
-   - If plan has `## Requisitos Funcionales`, `## Modelo de Datos`, etc. → `es`
-   - If plan has `## Fonctionnalités`, `## Modèle de données` → `fr`
-   - If plan has `## Funktionalität`, `## Datenmodell` → `de`
+1. Auto-detect language from `docs/pipeline/plan/requirements.md` content:
+   - If file has `## Requisitos Funcionales` → `es`
+   - If file has `## Fonctionnalités` → `fr`
+   - If file has `## Funktionalität` → `de`
+   - If file has `## Requisitos Funcionais` → `pt`
+   - If file has `## Requisiti Funzionali` → `it`
    - Otherwise → `en` (default)
 2. Present the detected language to the user:
    "Plan detected as [es/en/fr/de/...]. Use this for spec scenarios? (y/n)"
@@ -91,31 +105,35 @@ Always start every `.feature` file with:
 - **Narrative language**: Use the configured language for all step text
 - **Technical terms**: Keep in English (e.g., `token JWT`, `endpoint /api/auth`,
   `email`, `password`, `API`, `OAuth`). Do NOT translate technical vocabulary.
-- **Names of variables/endpoints/entities**: Keep in English as defined in plan.md
+- **Names of variables/endpoints/entities**: Keep in English as defined in the plan
 - **Step text**: Natural language in the configured code, technical terms in English
 
 ## Extension Detection
 
-Check if `plan.md` contains `## Extension N:` sections. If it does, check
-`state.json` → `extensions_processed`. Only generate features for extensions
-where `N > extensions_processed`.
+Check if `docs/pipeline/plan/extensions/` directory exists. If it does,
+list files in it. Parse extension numbers from filenames (format: `NN-<slug>.md`).
+Compare against `state.json` → `extensions_processed`. Only generate features
+for extensions where `N > extensions_processed`.
 
-If `plan.md` has no extensions (fresh plan) and `docs/pipeline/features/`
-already has `.feature` files, ask the user: "Features already exist. Regenerate
-all or only add missing scenarios?" Respect their choice.
+If no extensions exist and `docs/pipeline/features/` already has `.feature`
+files, ask the user: "Features already exist. Regenerate all or only add
+missing scenarios?" Respect their choice.
 
 ## Workflow
 
 ### Step 1: Analyze the plan
 
-Read `docs/pipeline/plan.md` and extract:
-- **Project Stacks**: determines whether scenarios are API, UI, or both
-- **Functional Requirements**: each FR becomes one or more scenarios
-- **Edge Cases & Error Handling**: each edge case becomes a scenario
-- **Data Model**: entities and fields used in Given preconditions
-- **API Contracts**: endpoints, methods, request/response schemas
-- **UI/UX Design**: screens, states, user interactions (if UI stack)
-- **Testing Strategy**: may already define spec scenarios
+Read the plan section files (already loaded in Input) and extract:
+- **Project Stacks** (from `index.md`): determines whether scenarios are API, UI, or both
+- **Functional Requirements** (from `requirements.md`): each FR becomes one or more scenarios
+- **Edge Cases & Error Handling** (from `edge-cases.md`): each edge case becomes a scenario
+- **Data Model** (from `data-model.md`): entities and fields used in Given preconditions
+- **API Contracts** (from `api.md`): endpoints, methods, request/response schemas
+- **UI/UX Design** (from `ui.md`): screens, states, user interactions (if UI stack)
+- **Testing Strategy** (from `testing.md`): may already define spec scenarios
+
+For extensions, read each relevant `plan/extensions/N-*.md` file and extract
+the same categories.
 
 ### Step 2: Group into features
 
@@ -258,7 +276,7 @@ After approval:
 
 ## Rules
 
-- NEVER modify `plan.md` or `tasks.md`
+- NEVER modify files in `docs/pipeline/plan/` or `docs/pipeline/tasks.md`
 - NEVER delete existing `.feature` files unless the user explicitly requests it
 - NEVER generate step definition code — you write specs only
 - NEVER run behave, cucumber, or any BDD test runner
@@ -267,16 +285,17 @@ After approval:
 - Scenario titles must describe the business outcome, not the technical action
 - Keep scenarios focused — max 10 steps per scenario (including background)
 - If a functional requirement is complex, split it into multiple scenarios
-- Use the user's language from plan.md for natural language text
+- Use the user's language from plan section files for natural language text
 - Keep technical terms (API, JWT, OAuth, endpoint, etc.) in English
 - Always ask for user approval before considering specs final
 
 ## Appendix: Plan Format Detection
 
-Detect the plan language by checking these section titles in order:
+Detect the plan language by reading `docs/pipeline/plan/requirements.md`
+and checking these section titles in order:
 
-| Section Title | Language |
-|---------------|----------|
+| Section Title in requirements.md | Language |
+|----------------------------------|----------|
 | `## Functional Requirements` | `en` |
 | `## Requisitos Funcionales` | `es` |
 | `## Fonctionnalités` | `fr` |

@@ -52,10 +52,11 @@ For each pending task in order:
 
 Invoke the `@implementer` subagent with:
 ```
-Implement task <N> from docs/pipeline/tasks.md. Read the task specification,
-the plan at docs/pipeline/plan.md, and the feature specs at
-docs/pipeline/features/ if referenced. Write production code and unit tests
-that verify the spec scenarios. Report what was implemented.
+Implement task <N> from docs/pipeline/tasks.md. Read the task specification
+and the feature specs at docs/pipeline/features/ if referenced. Do NOT read
+any file in docs/pipeline/plan/ — the task spec + features contain all you
+need. Write production code and unit tests that verify the spec scenarios.
+Report what was implemented.
 ```
 
 Wait for the implementer to complete. If it fails, stop the batch and report.
@@ -64,8 +65,11 @@ Wait for the implementer to complete. If it fails, stop the batch and report.
 
 Invoke the `@validator` subagent with:
 ```
-Validate task <N> from docs/pipeline/tasks.md. Read the task specification,
-the plan at docs/pipeline/plan.md, and feature specs at docs/pipeline/features/.
+Validate task <N> from docs/pipeline/tasks.md. Read the task specification
+and feature specs at docs/pipeline/features/. Read only the relevant plan
+section files from docs/pipeline/plan/ based on the task's Stack field
+(requirements.md always, plus data-model.md/api.md for backend tasks,
+ui.md for frontend tasks). Do NOT read index.md or the full plan.
 Cross-reference spec scenarios with unit tests. Run the test suite.
 Classify issues as minor or major. Save the report to
 docs/pipeline/reports/validate/task-<N>.md.
