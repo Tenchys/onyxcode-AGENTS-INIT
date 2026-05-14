@@ -58,22 +58,26 @@ The installer reads this file and generates `opencode.json` automatically.
     "validator":           "opencode-go/deepseek-v4-flash",
     "fixer":               "opencode-go/deepseek-v4-flash",
     "pr-creator":          "opencode-go/deepseek-v4-flash",
-    "bdd-specifier":       "opencode-go/deepseek-v4-flash",
+    "spec-writer":         "opencode-go/deepseek-v4-flash",
+    "batch-implementer":   "opencode-go/deepseek-v4-pro",
     "readme-generator":    "opencode-go/deepseek-v4-flash",
     "context-generator":   "opencode-go/deepseek-v4-flash",
-    "reference-extractor": "opencode-go/deepseek-v4-flash"
+    "reference-extractor": "opencode-go/deepseek-v4-flash",
+    "manifest-generator":  "opencode-go/deepseek-v4-flash"
   },
   "claude": {
-    "planner":       "sonnet",
-    "task-splitter": "haiku",
-    "implementer":   "sonnet",
-    "validator":     "haiku",
-    "fixer":         "haiku",
-    "pr-creator":    "haiku",
-    "bdd-specifier": "haiku",
+    "planner":              "sonnet",
+    "task-splitter":        "haiku",
+    "implementer":          "sonnet",
+    "validator":            "haiku",
+    "fixer":                "haiku",
+    "pr-creator":           "haiku",
+    "spec-writer":          "haiku",
+    "batch-implementer":    "sonnet",
     "readme-generator":    "haiku",
     "context-generator":   "haiku",
-    "reference-extractor": "haiku"
+    "reference-extractor": "haiku",
+    "manifest-generator":  "haiku"
   }
 }
 ```
