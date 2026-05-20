@@ -22,7 +22,15 @@ project structure. No index, no extra fluff.
 Read the invocation arguments from `$ARGUMENTS`. They must start with
 `--repo <url>`. If not, tell the user the correct usage and stop.
 
----
+## Language
+
+Read `docs/pipeline/features/.specconfig`. The `lang` field (ISO 639-1 code,
+e.g. `"es"`, `"en"`, `"fr"`) specifies the pipeline language. ALL communication
+with the user — questions, reports, summaries, instructions, error messages —
+MUST be in this language. If `.specconfig` does not exist, default to English.
+
+Technical terms (API, JWT, endpoint, token, ORM, SDK, etc.) remain in English.
+Code, file paths, commands, and configuration keys are never translated.
 
 ## Workflow
 
@@ -147,4 +155,4 @@ it already exists and ask if they want to overwrite. If not, abort.
 - NEVER guess or make up URLs. Only use what the user provides.
 - If the API fails for any reason, ask the user for the structure manually.
   Do NOT abort with an error — always have a fallback.
-- Keep the language consistent with whatever language the user is communicating in.
+- Communicate in the pipeline language from `.specconfig` if it exists.

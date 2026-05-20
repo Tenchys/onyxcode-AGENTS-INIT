@@ -21,6 +21,16 @@ You do NOT generate step definitions. You do NOT run any BDD test runner.
 The `.feature` files are read by the implementer to understand what unit tests
 to write.
 
+## Language
+
+Read `docs/pipeline/features/.specconfig`. The `lang` field (ISO 639-1 code,
+e.g. `"es"`, `"en"`, `"fr"`) specifies the pipeline language. ALL communication
+with the user — questions, reports, summaries, instructions, error messages —
+MUST be in this language. If `.specconfig` does not exist, default to English.
+
+Technical terms (API, JWT, endpoint, token, ORM, SDK, etc.) remain in English.
+Code, file paths, commands, and configuration keys are never translated.
+
 ## Input
 
 Read the relevant section files from `docs/pipeline/plan/`. Check that

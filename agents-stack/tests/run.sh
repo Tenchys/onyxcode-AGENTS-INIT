@@ -46,6 +46,7 @@ AGENTS=(
   context-generator
   reference-extractor
   manifest-generator
+  task-archiver
 )
 
 COMMANDS=(
@@ -61,6 +62,7 @@ COMMANDS=(
   readme
   context
   reference
+  archive
   sync-agents
 )
 
@@ -86,6 +88,7 @@ AGENT_NAMES=(
   context-generator
   reference-extractor
   manifest-generator
+  task-archiver
 )
 
 # ------------------------------------------------------------------
@@ -620,6 +623,154 @@ if [ -L "$PROJECT/.opencode/commands/implement-all.md" ]; then
   ok "implement-all command installed"
 else
   fail "implement-all command missing"
+fi
+
+# ------------------------------------------------------------------
+# 14. Pipeline language configuration
+# ------------------------------------------------------------------
+heading "14. Pipeline language"
+
+# All agents that must have the ## Language directive
+LANG_AGENTS=(planner spec-writer task-splitter implementer validator fixer pr-creator batch-implementer context-generator readme-generator reference-extractor task-archiver)
+
+# Expected content of the ## Language block (first 3 lines after the heading)
+LANG_BLOCK_LINE1="Read \`docs/pipeline/features/.specconfig\`. The \`lang\` field (ISO 639-1 code,"
+LANG_BLOCK_LINE2='e.g. `"es"`, `"en"`, `"fr"`) specifies the pipeline language. ALL communication'
+LANG_BLOCK_LINE3="with the user — questions, reports, summaries, instructions, error messages —"
+LANG_BLOCK_LINE4="MUST be in this language. If \`.specconfig\` does not exist, default to English."
+LANG_BLOCK_TECH="Technical terms (API, JWT, endpoint, token, ORM, SDK, etc.) remain in English."
+
+for agent in "${LANG_AGENTS[@]}"; do
+  file="$ROOT/agents/${agent}.md"
+  if [ -f "$file" ]; then
+    if grep -q '^## Language$' "$file"; then
+      ok "${agent}.md has ## Language section"
+    else
+      fail "${agent}.md missing ## Language section"
+    fi
+
+    # Verify key content phrases are present
+    if grep -qF "$LANG_BLOCK_LINE1" "$file"; then
+      ok "${agent}.md Language block line 1 correct"
+    else
+      fail "${agent}.md Language block line 1 mismatch"
+    fi
+
+    if grep -qF "$LANG_BLOCK_LINE3" "$file"; then
+      ok "${agent}.md Language block line 3 correct"
+    else
+      fail "${agent}.md Language block line 3 mismatch"
+    fi
+
+    if grep -qF "$LANG_BLOCK_TECH" "$file"; then
+      ok "${agent}.md Language block — technical terms rule present"
+    else
+      fail "${agent}.md Language block — technical terms rule missing"
+    fi
+  else
+    fail "${agent}.md file not found"
+  fi
+done
+
+# Verify planner.md no longer has the old "Write the plan in English" rule
+if grep -q 'Write the plan in English' "$ROOT/agents/planner.md"; then
+  fail "planner.md still says 'Write the plan in English' — should be pipeline language"
+else
+  ok "planner.md no longer hardcodes English"
+fi
+
+# Verify planner.md has the new rule
+if grep -q 'Write plan content in the pipeline language' "$ROOT/agents/planner.md"; then
+  ok "planner.md uses pipeline language from .specconfig"
+else
+  fail "planner.md missing pipeline language rule"
+fi
+
+# --- Installer language prompts ---
+
+# install.sh: user-facing text must say "Pipeline language" not "Spec language"
+if grep -q 'Pipeline language' "$ROOT/install.sh"; then
+  ok "install.sh says 'Pipeline language'"
+else
+  fail "install.sh missing 'Pipeline language' text"
+fi
+
+# install.sh: the interactive prompt
+if grep -q 'read -p "Pipeline language' "$ROOT/install.sh"; then
+  ok "install.sh prompt says 'Pipeline language'"
+else
+  fail "install.sh prompt still says 'Spec language'"
+fi
+
+# install.sh: usage text describes it as pipeline language
+if grep -q 'Controls all agent communication' "$ROOT/install.sh"; then
+  ok "install.sh usage describes pipeline-wide scope"
+else
+  fail "install.sh usage missing pipeline scope description"
+fi
+
+# install.sh: log output
+if grep -q 'log "Pipeline language:' "$ROOT/install.sh"; then
+  ok "install.sh log says 'Pipeline language'"
+else
+  fail "install.sh log still says 'Spec language'"
+fi
+
+# install.sh: final output
+if grep -q 'echo "Pipeline language:' "$ROOT/install.sh"; then
+  ok "install.sh final output says 'Pipeline language'"
+else
+  fail "install.sh final output still says 'Spec language'"
+fi
+
+# install.ps1: prompt
+if grep -q 'Read-Host "Pipeline language' "$ROOT/install.ps1"; then
+  ok "install.ps1 prompt says 'Pipeline language'"
+else
+  fail "install.ps1 prompt still says 'Spec language'"
+fi
+
+# install.ps1: log output
+if grep -q 'Pipeline language:.*docs/pipeline/features/.specconfig' "$ROOT/install.ps1"; then
+  ok "install.ps1 log says 'Pipeline language'"
+else
+  fail "install.ps1 log still says 'Spec language'"
+fi
+
+# install.ps1: final output
+if grep -q 'Write-Host "Pipeline language:' "$ROOT/install.ps1"; then
+  ok "install.ps1 final output says 'Pipeline language'"
+else
+  fail "install.ps1 final output still says 'Spec language'"
+fi
+
+# --- .specconfig format preserved ---
+
+# install.sh still creates .specconfig with lang + version fields
+if grep -q '"lang".*"version".*1' "$ROOT/install.sh" || grep -q 'lang.*version.*1' "$ROOT/install.sh"; then
+  ok "install.sh .specconfig format preserved (lang + version)"
+else
+  fail "install.sh .specconfig format may be broken"
+fi
+
+if grep -q 'lang.*version.*1' "$ROOT/install.ps1"; then
+  ok "install.ps1 .specconfig format preserved (lang + version)"
+else
+  fail "install.ps1 .specconfig format may be broken"
+fi
+
+# Verify spec-writer still references .specconfig for language detection
+if grep -q 'docs/pipeline/features/.specconfig' "$ROOT/agents/spec-writer.md"; then
+  ok "spec-writer still references .specconfig"
+else
+  fail "spec-writer missing .specconfig reference"
+fi
+
+# Verify context-generator updated its language rule
+if grep -q 'pipeline language from' "$ROOT/agents/context-generator.md"; then
+  ok "context-generator references pipeline language"
+else
+  fail "context-generator missing pipeline language reference"
 fi
 
 # ------------------------------------------------------------------

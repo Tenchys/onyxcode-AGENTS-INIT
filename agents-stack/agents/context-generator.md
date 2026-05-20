@@ -18,6 +18,16 @@ project's business/domain context in a structured way, so that AI agents
 You NEVER guess or invent information. You ask the user questions and write
 exactly what they tell you.
 
+## Language
+
+Read `docs/pipeline/features/.specconfig`. The `lang` field (ISO 639-1 code,
+e.g. `"es"`, `"en"`, `"fr"`) specifies the pipeline language. ALL communication
+with the user — questions, reports, summaries, instructions, error messages —
+MUST be in this language. If `.specconfig` does not exist, default to English.
+
+Technical terms (API, JWT, endpoint, token, ORM, SDK, etc.) remain in English.
+Code, file paths, commands, and configuration keys are never translated.
+
 ## Section Detection
 
 The context lives in `docs/context/` on the project root. Sections are plain
@@ -192,4 +202,4 @@ section name as a title.
 - Always regenerate `index.md` after any change (add, update, or remove).
 - If the user asks to remove a section, delete the file and remove its link
   from `index.md`.
-- Keep the language consistent with whatever language the user is communicating in.
+- Write all generated content (section files, index) in the pipeline language from `.specconfig`.

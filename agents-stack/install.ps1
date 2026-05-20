@@ -153,7 +153,7 @@ function Merge-OpenCodeConfig {
     $dst = Join-Path $ProjectRoot "opencode.json"
     $agent = [ordered]@{}
 
-    foreach ($name in @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor")) {
+    foreach ($name in @("planner", "task-splitter", "task-archiver", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor")) {
         $model = Get-Model "opencode" $name
         if ($model) {
             $agent[$name] = [ordered]@{
@@ -230,7 +230,7 @@ switch ($Target) {
 switch ($Target) {
     "opencode" {
         Write-Host "[→] Installing opencode assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
+        @("planner", "task-splitter", "task-archiver", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-OpenCodeAgent $_
         }
 
@@ -240,13 +240,13 @@ switch ($Target) {
     }
     "claude" {
         Write-Host "[→] Installing Claude Code assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
+        @("planner", "task-splitter", "task-archiver", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-ClaudeAgent $_
         }
     }
     default {
         Write-Host "[→] Installing opencode assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
+        @("planner", "task-splitter", "task-archiver", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-OpenCodeAgent $_
         }
 
@@ -256,7 +256,7 @@ switch ($Target) {
 
         Write-Host ""
         Write-Host "[→] Installing Claude Code assets..." -ForegroundColor Cyan
-        @("planner", "task-splitter", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
+        @("planner", "task-splitter", "task-archiver", "implementer", "validator", "fixer", "pr-creator", "spec-writer", "batch-implementer", "readme-generator", "context-generator", "reference-extractor") | ForEach-Object {
             Install-ClaudeAgent $_
         }
     }
@@ -265,7 +265,7 @@ switch ($Target) {
 # --- Commands ---
 Write-Host ""
 Write-Host "[→] Installing slash commands..." -ForegroundColor Cyan
-@("planner", "tasks", "implement", "validate", "fix", "pr-ready", "spec", "implement-all", "plan-extend", "readme", "context", "reference") | ForEach-Object {
+@("planner", "tasks", "implement", "validate", "fix", "pr-ready", "spec", "implement-all", "plan-extend", "readme", "context", "reference", "archive") | ForEach-Object {
     $cmd = $_
     $RuntimeTargets | ForEach-Object {
         Install-Commands $_ $cmd
@@ -291,12 +291,12 @@ if (Test-Path $skillDir) {
 
 # --- Spec language configuration ---
 Write-Host ""
-Write-Host "[→] Configuring spec language..." -ForegroundColor Cyan
+Write-Host "[→] Configuring pipeline language..." -ForegroundColor Cyan
 $BDDLang = if ($args -contains "--spec-lang") {
     $idx = [array]::IndexOf($args, "--spec-lang")
     $args[$idx + 1]
 } elseif ([Console]::IsOutputRedirected -eq $false -and [Environment]::UserInteractive) {
-    $userLang = Read-Host "Spec language code [en]"
+    $userLang = Read-Host "Pipeline language [en]"
     if ([string]::IsNullOrWhiteSpace($userLang)) { "en" } else { $userLang }
 } else { "en" }
 
@@ -304,7 +304,7 @@ $specConfigDir = Join-Path $ProjectRoot "docs/pipeline/features"
 if (-not (Test-Path $specConfigDir)) { New-Item -ItemType Directory -Path $specConfigDir -Force | Out-Null }
 $specConfig = @{ lang = $BDDLang; version = 1 } | ConvertTo-Json
 Set-Content -Path (Join-Path $specConfigDir ".specconfig") -Value $specConfig
-Write-Host "[✓] Spec language: $BDDLang → docs/pipeline/features/.specconfig" -ForegroundColor Green
+Write-Host "[✓] Pipeline language: $BDDLang → docs/pipeline/features/.specconfig" -ForegroundColor Green
 
 # --- Final instructions ---
 Write-Host ""
@@ -318,5 +318,5 @@ switch ($Target) {
     "claude"   { Write-Host "Installed: .claude/" }
     default     { Write-Host "Installed: .opencode/, .claude/, opencode.json" }
 }
-Write-Host "Spec language: $BDDLang"
+Write-Host "Pipeline language: $BDDLang"
 Write-Host ""

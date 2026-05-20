@@ -35,8 +35,9 @@ Targets:
   opencode      Install .opencode assets and merge opencode.json
   claude        Install .claude assets only
   both          Install both sets (default)
-  --spec-lang   Default spec language code (e.g., en, es, fr, de, pt).
-                Default: en. Can be changed later via /spec --lang
+  --spec-lang   Pipeline language code (e.g., en, es, fr, de, pt).
+                 Controls all agent communication and generated content.
+                 Default: en.
 EOF
 }
 
@@ -440,15 +441,15 @@ done
 
 # --- Spec language configuration ---
 echo ""
-info "Configuring spec language..."
+info "Configuring pipeline language..."
 mkdir -p "$PROJECT_ROOT/docs/pipeline/features"
 if [ -t 0 ] && [ "$BDD_LANG" = "en" ] && ! echo "$*" | grep -q -- --spec-lang; then
   echo ""
-  read -p "Spec language code [en]: " user_lang
+  read -p "Pipeline language [en]: " user_lang
   BDD_LANG="${user_lang:-en}"
 fi
 echo "{\"lang\": \"$BDD_LANG\", \"version\": 1}" > "$PROJECT_ROOT/docs/pipeline/features/.specconfig"
-log "Spec language:  $BDD_LANG → docs/pipeline/features/.specconfig"
+log "Pipeline language: $BDD_LANG → docs/pipeline/features/.specconfig"
 
 # --- Final instructions ---
 echo ""
@@ -468,5 +469,5 @@ case "$TARGET" in
     echo "Installed: .opencode/, .claude/, opencode.json"
     ;;
 esac
-echo "Spec language: $BDD_LANG"
+echo "Pipeline language: $BDD_LANG"
 echo ""
