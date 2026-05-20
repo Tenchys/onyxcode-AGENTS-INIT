@@ -24,14 +24,14 @@ If not, tell the user which phase they are in and what command to run next.
 
 ### Step 1: Identify the task to validate
 
-Read `docs/pipeline/tasks.md`. If a task ID is provided (e.g.,
+Read `docs/pipeline/tasks/task-<N>.md`. If a task ID is provided (e.g.,
 `/validate 3`), validate that task. If no ID is provided, find the most recently
 completed task (status: `completed`) and validate it. If no completed task is
 found, ask the user which task to validate.
 
 ### Step 2: Read context
 
-Read the task's specification from `docs/pipeline/tasks.md`.
+Read the task's specification from `docs/pipeline/tasks/task-<N>.md`.
 
 Read only the relevant plan section files based on the task's **Stack** field:
 
@@ -203,4 +203,4 @@ After saving the report, tell the user what to do next based on the verdict:
 - NEVER skip running tests.
 - Classify severity accurately — don't mark architectural problems as `minor`.
 - Every issue must include a specific file path and a concrete fix suggestion.
-- If `tasks.md` or `docs/pipeline/plan/index.md` is missing, tell the user to run `/planner` first.
+- If `docs/pipeline/tasks/index.md` or `docs/pipeline/plan/index.md` is missing, tell the user to run `/planner` first.

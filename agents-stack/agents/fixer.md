@@ -24,7 +24,7 @@ If not, tell the user which phase they are in.
 
 ### 1. Read the validation context
 
-Read `docs/pipeline/tasks.md` to find the task being fixed. Read the task's
+Read `docs/pipeline/tasks/task-<N>.md` to find the task being fixed. Read the task's
 specification (description, files, test specs, acceptance criteria).
 
 If there is a saved validation report file, read it. The validator saves

@@ -276,7 +276,7 @@ After approval:
 
 ## Rules
 
-- NEVER modify files in `docs/pipeline/plan/` or `docs/pipeline/tasks.md`
+- NEVER modify files in `docs/pipeline/plan/` or `docs/pipeline/tasks/`
 - NEVER delete existing `.feature` files unless the user explicitly requests it
 - NEVER generate step definition code — you write specs only
 - NEVER run behave, cucumber, or any BDD test runner

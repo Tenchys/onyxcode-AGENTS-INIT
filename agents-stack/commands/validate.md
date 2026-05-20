@@ -6,7 +6,7 @@ There is a subagent available called @validator that specializes in
 validating implemented tasks against their plan specifications.
 
 Invoke the @validator subagent now. It will:
-1. Read the task from `docs/pipeline/tasks.md`
+1. Read the task from `docs/pipeline/tasks/task-<N>.md`
 2. Check files, tests, and test results
 3. Cross-reference with relevant section files in `docs/pipeline/plan/`
 4. Check spec scenario coverage from `docs/pipeline/features/`

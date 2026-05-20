@@ -12,10 +12,10 @@ Invoke the @planner subagent with the following instructions:
 1. Read the argument: $ARGUMENTS
 2. Read `docs/pipeline/plan/index.md` (it should already exist — if not, tell
    the user to run `/planner` first).
-3. Read `docs/pipeline/tasks.md` and `docs/pipeline/state.json` to
+3. Read `docs/pipeline/tasks/index.md` and `docs/pipeline/state.json` to
    understand existing task statuses.
 4. Enter append mode: clarify the new requirement with the user using the same
    thorough questioning workflow, then create a new extension file as
    `docs/pipeline/plan/extensions/N-<slug>.md`.
 5. When done, tell the user to run `/spec` to generate feature specs for the
-   extension, then `/tasks` to merge the new extension into `tasks.md`.
+   extension, then `/tasks` to merge the new extension into the task index.

@@ -181,8 +181,10 @@ original plan or already-implemented tasks.
 ### How Append Mode Works
 
 1. **Read existing context**: Read `docs/pipeline/plan/index.md` (for prior
-   decisions) and `docs/pipeline/tasks.md` (to know which tasks are already
-   defined/completed). Optionally read other section files as needed.
+   decisions) and `docs/pipeline/tasks/index.md` (to know which tasks are
+   already defined/completed). Use the `## Active Tasks` table for pending
+   and in-progress tasks, and `## Archived Tasks` ranges to know which
+   completed tasks exist. Optionally read other section files as needed.
 
 2. **Identify extension number**: List files in `docs/pipeline/plan/extensions/`.
    The new extension uses the next number `N+1`. If no extensions directory
@@ -227,13 +229,13 @@ original plan or already-implemented tasks.
      before task 10", or "independent, can go anywhere after Task 3").
 
    ## Depends On (Existing Tasks)
-   - List task IDs from `tasks.md` that MUST be completed before these new tasks.
+    - List task IDs from `tasks/index.md` that MUST be completed before these new tasks.
    ```
 
 5. **Report the extension number**: After creating the file, tell the user:
    "Extension N added to `docs/pipeline/plan/extensions/N-<slug>.md`.
    Run `/spec` to generate feature specs for this extension,
-   then `/tasks` to merge new tasks into tasks.md."
+    then `/tasks` to merge new tasks into the task index."
 
 ### Rules for Append Mode
 

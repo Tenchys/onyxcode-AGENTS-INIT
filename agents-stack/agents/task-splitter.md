@@ -6,7 +6,7 @@ command: tasks
 mode: subagent
 permission:
   edit: allow
-  bash: deny
+  bash: allow
   task: allow
   question: allow
 hidden: false
@@ -44,10 +44,10 @@ scenarios in your tasks (see `Unit test spec` field in the task template).
 
 **Detection**: If `docs/pipeline/plan/extensions/` directory exists and
 `state.json.extensions_processed < N` (where N is the count of extension files),
-you are in **merge mode**. Read `docs/pipeline/tasks.md` (if it exists) and
+you are in **merge mode**. Read `docs/pipeline/tasks/index.md` (if it exists) and
 follow the instructions in the **Appendix: Merge Mode** section. If all
 extensions are already processed, report "No new extensions to process.
-tasks.md is up to date."
+tasks/index.md is up to date."
 
 Pay special attention to the `## Project Stacks` section in `plan/index.md`.
 This section tells you which stack layers exist and what framework each uses.
@@ -97,24 +97,32 @@ Every task must follow this format:
 
 ## Output
 
-Produce `docs/pipeline/tasks.md` with this structure:
+Create the `docs/pipeline/tasks/` directory and produce these files:
+
+### `docs/pipeline/tasks/index.md` — Task Index
 
 ```markdown
 # Tasks: [Feature Title]
 
 ## Summary
-- Total tasks: N
-- Estimated total effort: X hours
-- Critical path: [task sequence that defines minimum delivery time]
+- Total: N | Active: N | Archived: 0 | Estimated effort: Xh | Critical path: ...
+
+## Active Tasks
+| ID | Title | Stack | Status | Deps | File |
+|----|-------|-------|--------|------|------|
+| 01 | Setup project | backend | pending | none | task-01.md |
+| 02 | User model | backend | pending | 01 | task-02.md |
 
 ## Dependency Graph
 [ASCII or mermaid diagram showing task dependencies]
-
-## Tasks
-[All tasks in order, using the template above]
 ```
 
-After writing `tasks.md`, present the task summary and ask for user approval
+### `docs/pipeline/tasks/task-NN.md` — Individual Task Specs
+
+One file per task, using zero-padded IDs (01, 02, ..., 99). Each file contains
+the full task specification using the Task Template format above.
+
+After writing the task files, present the task summary and ask for user approval
 using the `question` tool:
 
 > "Planning phase complete. N tasks defined across M feature domains.
@@ -130,7 +138,7 @@ If **Yes, approved**: update `docs/pipeline/state.json`:
   implement all tasks, or `/implement <task-id>` for individual tasks."
 
 If **No, I need changes**: keep `phase` as `"planning"`. Tell the user:
-"Phase stays in planning. Edit `docs/pipeline/tasks.md`, `.feature` files,
+"Phase stays in planning. Edit the task files in `docs/pipeline/tasks/`, `.feature` files,
 or run `/plan-extend` to adjust the plan. Then run `/tasks` again."
 
 ## Rules
@@ -143,6 +151,8 @@ or run `/plan-extend` to adjust the plan. Then run `/tasks` again."
 - If `.feature` files exist, each task must reference its relevant scenarios
   in the `Unit test spec` and `E2E verification` fields.
 - Group related tasks under sub-headings if there are more than 10.
+- Zero-pad all task IDs to 2 digits (01, 02, ..., 99) in both filenames
+  (`task-01.md`) and the index table.
 - When done, present the task summary and ask for user approval before
   transitioning to implementation phase.
 
@@ -156,13 +166,16 @@ to the existing task list instead of overwriting.
 
 ### 1. Read Existing State
 
-Read `docs/pipeline/tasks.md` to understand:
-- The **last task number** (e.g., if the last task is `### Task 7`, start at 8).
+Read `docs/pipeline/tasks/index.md` to understand:
+- The **last task number** from the Active Tasks table (e.g., if the last is
+  `07`, start at `08`).
 - All existing task **dependencies** — new tasks may depend on existing ones.
 - All existing task **statuses** — preserve them exactly as-is.
+- The **Archived Tasks** ranges — these are completed tasks that no longer
+  have individual files but dependencies on them are satisfied.
 
-If `docs/pipeline/tasks.md` does not exist yet (first extension to a new plan),
-start task numbering at 1 and treat this as a fresh generation.
+If `docs/pipeline/tasks/index.md` does not exist yet (first extension to a
+new plan), start task numbering at 01 and treat this as a fresh generation.
 
 ### 2. Identify New Extensions
 
@@ -172,9 +185,10 @@ from each filename (format `NN-<slug>.md`). For extensions where
 the standard template. The `### Task N:` numbering continues from the last
 existing task number + 1.
 
-Only process extension sections that have NOT been reflected in `tasks.md`
-yet. To determine this, check if `tasks.md` already has a
-`## Extension N Tasks` section for each extension number.
+Only process extension sections that have NOT been reflected in the task
+index yet. To determine this, check if `tasks/index.md` already has
+tasks from this extension (by comparing extension N with the last
+processed extension in `state.json.extensions_processed`).
 
 ### 3. Determine Dependencies
 
@@ -186,32 +200,23 @@ in each extension. Use these to set `**Depends on**:` for new tasks.
 - New tasks can depend on existing tasks, but existing tasks NEVER depend on
   new tasks (existing tasks are immutable).
 
-### 4. Write Merged tasks.md
+### 4. Write Merged Task Files
 
-Produce `tasks.md` with this structure:
+Preserve ALL existing `tasks/task-NN.md` files exactly as-is — same numbers,
+same statuses, same text. NEVER modify existing task files.
 
-```markdown
-# Tasks: [Original Feature Title]
+Create NEW `tasks/task-NN.md` files for the extension tasks, using the
+standard Task Template and zero-padded IDs continuing from the last
+existing task number + 1.
 
-## Summary
-- Total tasks: N_total  (existing + new)
-- New tasks: N_new
-- Estimated total effort: X hours
+Update `docs/pipeline/tasks/index.md`:
+- Add new rows to the `## Active Tasks` table
+- Update `## Summary` totals (Total, Active, New)
+- Update `## Dependency Graph` to include new tasks
 
-## Existing Tasks (1 to N_original)
-[All original tasks, preserved EXACTLY — same numbers, same statuses, same text.
- Group them under sub-headings if they already had them.]
-
-## Extension 1 Tasks (N_original+1 to N_original+K)
-[New tasks for the first new extension]
-
-## Dependency Graph
-[Updated ASCII or mermaid diagram showing ALL tasks, old and new]
-```
-
-If `tasks.md` didn't exist before (first extension), treat `Existing Tasks`
-as the tasks generated from `plan/requirements.md` and other non-extension
-section files.
+If `tasks/index.md` didn't exist before (first extension), treat existing
+tasks as those generated from `plan/requirements.md` and other non-extension
+section files, and create the index from scratch.
 
 ### Rules for Merge Mode
 
@@ -226,5 +231,5 @@ section files.
   Ask for user approval before transitioning to implementation (same approval
   step as standard mode).
 - If all extension files in `docs/pipeline/plan/extensions/` are already
-  reflected in `tasks.md`, report "No new extensions to merge.
-  tasks.md is up to date."
+  reflected in the task index, report "No new extensions to merge.
+  tasks/index.md is up to date."

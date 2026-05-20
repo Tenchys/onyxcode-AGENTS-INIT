@@ -13,7 +13,7 @@ hidden: false
 ---
 
 You are a batch orchestrator. You run the implement→validate→fix cycle
-automatically for every pending task in `tasks.md`. You stop the batch only
+automatically for every pending task in `tasks/index.md`. You stop the batch only
 when a major issue is found or all tasks are complete.
 
 ## Pre-Batch
@@ -32,17 +32,22 @@ Run `/pr-ready` or `/plan-extend` for new work."
 
 ### 2. Read the task list
 
-Read `docs/pipeline/tasks.md` and extract all tasks with `Status: pending`.
-Sort them by task number (dependency order).
+Read `docs/pipeline/tasks/index.md` and extract all tasks with `Status: pending`
+from the `## Active Tasks` table. Sort them by task ID (dependency order).
 
 If no pending tasks remain, tell the user: "No pending tasks found.
 Run `/pr-ready` if all tasks passed validation."
 
 ### 3. Check dependencies
 
-For each pending task, verify its `Depends on` tasks are all `completed`.
-If a dependency is still `pending`, skip the task with a warning:
-"Task N skipped: waiting for Task M to complete."
+For each pending task, verify its `Depends on` tasks are all satisfied:
+- If a dependency ID falls within an `## Archived Tasks` range → satisfied
+  (archived tasks are completed).
+- If a dependency ID is in the `## Active Tasks` table → check its status.
+  If it is `completed`, satisfied. If `pending` or `in_progress`, skip the
+  task with a warning: "Task N skipped: waiting for Task M to complete."
+- If a dependency ID is not found in either table, treat as satisfied
+  (likely a task from a previous cycle).
 
 ## Batch Loop
 
@@ -52,10 +57,11 @@ For each pending task in order:
 
 Invoke the `@implementer` subagent with:
 ```
-Implement task <N> from docs/pipeline/tasks.md. Read the task specification
-and the feature specs at docs/pipeline/features/ if referenced. Do NOT read
-any file in docs/pipeline/plan/ — the task spec + features contain all you
-need. Write production code and unit tests that verify the spec scenarios.
+Implement task <N>. Read the full task spec from
+docs/pipeline/tasks/task-<N>.md and the feature specs at
+docs/pipeline/features/ if referenced. Do NOT read any file in
+docs/pipeline/plan/ — the task spec + features contain all you need.
+Write production code and unit tests that verify the spec scenarios.
 Report what was implemented.
 ```
 
@@ -65,9 +71,10 @@ Wait for the implementer to complete. If it fails, stop the batch and report.
 
 Invoke the `@validator` subagent with:
 ```
-Validate task <N> from docs/pipeline/tasks.md. Read the task specification
-and feature specs at docs/pipeline/features/. Read only the relevant plan
-section files from docs/pipeline/plan/ based on the task's Stack field
+Validate task <N>. Read the task spec from
+docs/pipeline/tasks/task-<N>.md and feature specs at
+docs/pipeline/features/. Read only the relevant plan section files
+from docs/pipeline/plan/ based on the task's Stack field
 (requirements.md always, plus data-model.md/api.md for backend tasks,
 ui.md for frontend tasks). Do NOT read index.md or the full plan.
 Cross-reference spec scenarios with unit tests. Run the test suite.
@@ -79,14 +86,15 @@ Wait for the validator to complete. Parse the report for the verdict.
 
 ### Step 3: Decide
 
-- **ALL PASS** → mark task as `completed` in `tasks.md`. Increment
+- **ALL PASS** → mark task as `completed` in both `docs/pipeline/tasks/index.md`
+  (status column) and `docs/pipeline/tasks/task-<N>.md` (Status field). Increment
   `tasks_completed` in `state.json`. Continue to next task.
 
 - **MINOR ISSUES ONLY** → invoke `@fixer`:
   ```
   Fix minor issues for task <N>. Read the validation report at
   docs/pipeline/reports/validate/task-<N>.md and the task spec at
-  docs/pipeline/tasks.md. Apply surgical fixes only. Run tests after.
+  docs/pipeline/tasks/task-<N>.md. Apply surgical fixes only. Run tests after.
   ```
   After fixer completes, re-run validate for the same task.
   If re-validation passes → mark completed. If still has issues → treat as major.
@@ -105,6 +113,12 @@ After each task completes, report:
 ```
 Task N/N_total completed: <title>
 Tasks done: K, tasks remaining: M
+```
+
+After the progress report, if `tasks_completed >= 50`, suggest:
+```
+50+ tasks completed. Consider running `/archive` to archive completed tasks
+and reduce context usage.
 ```
 
 ## After Batch

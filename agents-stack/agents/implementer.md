@@ -26,7 +26,7 @@ Run `/tasks` first to enter implementation phase."
 
 ### 1. Read the task and determine the stack
 
-Read `docs/pipeline/tasks.md` and identify the task to implement. If a task ID
+Read `docs/pipeline/tasks/task-<N>.md` for the task to implement. If a task ID
 is provided, implement only that task. If no task ID is provided, ask which
 one to implement.
 
@@ -87,7 +87,7 @@ architecture already in use.
 ### 5. Read the feature specs (not the monolithic plan)
 
 Do NOT read files in `docs/pipeline/plan/` — the task specification in
-`tasks.md` together with the `.feature` files contain all the information
+the task specification in `tasks/task-<N>.md` together with the `.feature` files contain all the information
 needed. Reading the plan sections would waste context tokens.
 
 Check if `docs/pipeline/features/` exists and contains `.feature` files.
