@@ -3,6 +3,8 @@
 AI-assisted software development pipeline with 6 subagent stages.
 Compatible with **opencode** and **Claude Code**.
 
+**v1.0.0**
+
 ```
 /planner  →  /spec  →  /tasks  →  /implement-all  →  /pr-ready
 (plan)       (spec)    (split)    (batch)            (ship)
@@ -23,7 +25,7 @@ Copy `agents-stack/` to your project root and run the installer:
 ```bash
 cp -r agents-stack/ /path/to/your/project/
 cd /path/to/your/project/agents-stack
-./install.sh --target both
+./install.sh --target both --spec-lang es
 # or:
 #   ./install.sh --target opencode
 #   ./install.sh --target claude
@@ -31,18 +33,40 @@ cd /path/to/your/project/agents-stack
 #   .\install.ps1 -Target both
 ```
 
+The `--spec-lang` flag sets the **pipeline language** (ISO 639-1 code, e.g.
+`es`, `en`, `fr`, `de`, `pt`). All agent communication — questions, reports,
+instructions, and generated content — will be in this language. The installer
+prompts interactively if no flag is given.
+
 This creates:
 
 | Directory | Contents |
 |-----------|----------|
 | `.opencode/agents/` | Symlinks to agent definitions |
 | `.claude/agents/` | Copies with injected model config |
-| `.opencode/commands/` | Slash commands (`/planner`, `/spec`, `/tasks`, `/implement`, `/validate`, `/fix`, `/implement-all`, `/pr-ready`, `/context`, `/readme`, `/reference`) |
+| `.opencode/commands/` | Slash commands (`/planner`, `/spec`, `/tasks`, `/implement`, `/validate`, `/fix`, `/implement-all`, `/pr-ready`, `/context`, `/readme`, `/reference`, `/archive`) |
 | `.claude/commands/` | Slash commands (same set) |
 | `.opencode/skills/` | Language/framework skill symlinks |
 | `.claude/skills/` | Language/framework skill symlinks |
 | `opencode.json` | Auto-generated model configuration |
 | `AGENTS.md` | Pipeline documentation |
+
+## Pipeline Language
+
+The pipeline language is configured once at install time and stored in
+`docs/pipeline/features/.specconfig`. Every agent reads this file and
+communicates with the user in the configured language (ISO 639-1).
+
+```json
+{"lang": "es", "version": 1}
+```
+
+- Agent questions, reports, summaries, and error messages — all in the configured language
+- Plan content, task descriptions, and validation reports — generated in the configured language
+- Technical terms (API, JWT, endpoint, SDK) remain in English
+- The `/spec --lang <code>` flag overrides the language for a single spec generation
+
+Available languages: `en`, `es`, `fr`, `de`, `pt`, `it`, `ja`, `zh`, `ko`, `ru`, and any other ISO 639-1 code.
 
 ## Configure Models
 
@@ -63,7 +87,8 @@ The installer reads this file and generates `opencode.json` automatically.
     "readme-generator":    "opencode-go/deepseek-v4-flash",
     "context-generator":   "opencode-go/deepseek-v4-flash",
     "reference-extractor": "opencode-go/deepseek-v4-flash",
-    "manifest-generator":  "opencode-go/deepseek-v4-flash"
+    "manifest-generator":  "opencode-go/deepseek-v4-flash",
+    "task-archiver":       "opencode-go/deepseek-v4-flash"
   },
   "claude": {
     "planner":              "sonnet",
@@ -77,7 +102,8 @@ The installer reads this file and generates `opencode.json` automatically.
     "readme-generator":    "haiku",
     "context-generator":   "haiku",
     "reference-extractor": "haiku",
-    "manifest-generator":  "haiku"
+    "manifest-generator":  "haiku",
+    "task-archiver":       "haiku"
   }
 }
 ```
@@ -96,11 +122,11 @@ from `models.json` during installation.
 ### Full Pipeline
 
 ```bash
-# 1. Plan an idea interactively
+# 1. Plan an idea interactively — agents communicate in the pipeline language
 opencode run "/planner Add OAuth authentication to the API"
 
-# 2. Generate Gherkin specs from the plan
-opencode run "/spec --lang es"
+# 2. Generate Gherkin specs from the plan (language from .specconfig)
+opencode run "/spec"
 
 # 3. Decompose plan into atomic tasks
 opencode run "/tasks"
@@ -122,16 +148,18 @@ opencode run "/pr-ready"
 | Command | Description |
 |---------|-------------|
 | `/context` | Generate project context docs (read by planner automatically) |
-| `/spec [--lang <code>]` | Convert plan into Gherkin `.feature` files. Language auto-detected or set via `--lang` (es, en, fr, de, pt, etc.) |
+| `/spec [--lang <code>]` | Convert plan into Gherkin `.feature` files. Language from `.specconfig`; `--lang` overrides |
 | `/readme` | Generate a professional README.md |
 | `/reference --repo <url>` | Import external repository structure reference |
+| `/plan-extend` | Extend an existing plan with a new requirement |
+| `/archive` | Archive completed tasks and compress the task index |
 
 ## Subagents
 
 | Agent | Role | Model |
 |-------|------|-------|
 | **@planner** | Interactive requirements analyst — produces section files in `docs/pipeline/plan/` | DeepSeek V4 Pro / Sonnet |
-| **@spec-writer** | Converts plan into Gherkin `.feature` files. Supports multilingual specs | DeepSeek V4 Flash / Haiku |
+| **@spec-writer** | Converts plan into Gherkin `.feature` files. Reads `.specconfig` for pipeline language | DeepSeek V4 Flash / Haiku |
 | **@task-splitter** | Decomposes plan into atomic tasks in `tasks.md` | DeepSeek V4 Flash / Haiku |
 | **@implementer** | Detects project stack, loads matching skill, implements task with tests | MiniMax M2.7 / Sonnet |
 | **@batch-implementer** | Orchestrates implement→validate→fix for all pending tasks | DeepSeek V4 Pro / Sonnet |
@@ -141,6 +169,7 @@ opencode run "/pr-ready"
 | **@context-generator** | Generates structured business/domain docs in `docs/context/` | DeepSeek V4 Flash / Haiku |
 | **@readme-generator** | Generates professional README.md with auto-detected stack | DeepSeek V4 Flash / Haiku |
 | **@reference-extractor** | Imports external repo structure via GitHub API | DeepSeek V4 Flash / Haiku |
+| **@task-archiver** | Archives completed tasks, compresses task index, offers pipeline reset | DeepSeek V4 Flash / Haiku |
 
 ## Add Language/Framework Skills
 
@@ -194,10 +223,10 @@ your-project/
 │   └── skills/           → symlinks
 ├── agents-stack/
 │   ├── models.json       ← single source of truth for models
-│   ├── agents/           → subagent definitions
-│   ├── commands/         → slash command definitions
+│   ├── agents/           → subagent definitions (12 agents)
+│   ├── commands/         → slash command definitions (13 commands)
 │   ├── skills/           → python/, typescript/, react/, django/, fastapi/, textual/, _template/
-│   ├── tests/            → integration tests
+│   ├── tests/            → integration tests (292 tests)
 │   ├── install.sh
 │   ├── install.ps1
 │   ├── AGENTS.md
@@ -205,8 +234,8 @@ your-project/
 ├── opencode.json         ← auto-generated by installer
 ├── AGENTS.md             ← pipeline documentation
 ├── docs/pipeline/plan/   ← generated by /planner (section files)
-├── docs/pipeline/tasks.md ← generated by /tasks
-└── docs/pipeline/features/ ← generated by /spec
+├── docs/pipeline/tasks/  ← generated by /tasks (index.md + task-NN.md files)
+└── docs/pipeline/features/ ← generated by /spec (.feature files + .specconfig)
 ```
 
 ## License
